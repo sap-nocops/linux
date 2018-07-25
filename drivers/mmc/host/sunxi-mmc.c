@@ -1519,6 +1519,7 @@ static struct platform_driver sunxi_mmc_driver = {
 		.name	= "sunxi-mmc",
 		.of_match_table = of_match_ptr(sunxi_mmc_of_match),
 		.pm = &sunxi_mmc_pm_ops,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe		= sunxi_mmc_probe,
 	.remove		= sunxi_mmc_remove,
