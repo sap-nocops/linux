@@ -163,6 +163,10 @@ struct v4l2_subdev_core_ops {
 	int (*g_std)(struct v4l2_subdev *sd, v4l2_std_id *norm);
 	int (*s_std)(struct v4l2_subdev *sd, v4l2_std_id norm);
 	long (*ioctl)(struct v4l2_subdev *sd, unsigned int cmd, void *arg);
+#ifdef CONFIG_COMPAT
+	long (*compat_ioctl32)(struct v4l2_subdev *sd, unsigned int cmd,
+				       unsigned long arg);
+#endif
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	int (*g_register)(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg);
 	int (*s_register)(struct v4l2_subdev *sd, const struct v4l2_dbg_register *reg);
@@ -621,7 +625,7 @@ struct v4l2_subdev_fh {
 	}
 
 __V4L2_SUBDEV_MK_GET_TRY(v4l2_mbus_framefmt, format, try_fmt)
-__V4L2_SUBDEV_MK_GET_TRY(v4l2_rect, crop, try_compose)
+__V4L2_SUBDEV_MK_GET_TRY(v4l2_rect, crop, try_crop)
 __V4L2_SUBDEV_MK_GET_TRY(v4l2_rect, compose, try_compose)
 #endif
 

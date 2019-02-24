@@ -3322,6 +3322,7 @@ static int compat_sock_ioctl_trans(struct file *file, struct socket *sock,
 	case SIOCGARP:
 	case SIOCDARP:
 	case SIOCATMARK:
+	case SIOCKILLADDR:
 		return sock_do_ioctl(net, sock, cmd, arg);
 	}
 

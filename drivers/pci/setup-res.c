@@ -26,7 +26,11 @@
 #include <linux/slab.h>
 #include "pci.h"
 
-
+#ifdef CONFIG_ARCH_SUN50IW6
+#define PCIE_MEM_BASE	0x05410000
+static int barnum;
+static unsigned char bar[6];
+#endif
 void pci_update_resource(struct pci_dev *dev, int resno)
 {
 	struct pci_bus_region region;
@@ -135,7 +139,6 @@ EXPORT_SYMBOL(pci_claim_resource);
 void pci_disable_bridge_window(struct pci_dev *dev)
 {
 	dev_info(&dev->dev, "disabling bridge mem windows\n");
-
 	/* MMIO Base/Limit */
 	pci_write_config_dword(dev, PCI_MEMORY_BASE, 0x0000fff0);
 
@@ -238,7 +241,6 @@ static int _pci_assign_resource(struct pci_dev *dev, int resno,
 			break;
 		bus = bus->parent;
 	}
-
 	if (ret) {
 		if (res->flags & IORESOURCE_MEM)
 			if (res->flags & IORESOURCE_PREFETCH)
@@ -261,6 +263,12 @@ int pci_assign_resource(struct pci_dev *dev, int resno)
 {
 	struct resource *res = dev->resource + resno;
 	resource_size_t align, size;
+#ifdef CONFIG_ARCH_SUN50IW6
+	resource_size_t len;
+	u32 bardata;
+	int regno = 0;
+	int i;
+#endif
 	int ret;
 
 	align = pci_resource_alignment(dev, res);
@@ -287,6 +295,28 @@ int pci_assign_resource(struct pci_dev *dev, int resno)
 		if (resno < PCI_BRIDGE_RESOURCES)
 			pci_update_resource(dev, resno);
 	}
+
+#ifdef CONFIG_ARCH_SUN50IW6
+	if (res->flags & IORESOURCE_MEM_64) {
+		if (!barnum) {
+			for (i = 0; i < 6; i++) {
+				pci_read_config_dword(dev, PCI_BASE_ADDRESS_0 + i*4, &bardata);
+				if (bardata & 0x4) {
+					bar[regno] = i;
+					regno++;
+				}
+			}
+			barnum = 1;
+		}
+		if (bar[0] == resno) {
+			len = res->end - res->start;
+			res->start = PCIE_MEM_BASE;
+			res->end = res->start + len;
+			dev_info(&dev->dev, "BAR %d: assigned %pR\n", resno, res);
+		}
+	}
+#endif
+
 	return ret;
 }
 

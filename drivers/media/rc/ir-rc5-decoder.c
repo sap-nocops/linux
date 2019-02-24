@@ -22,6 +22,7 @@
 
 #include "rc-core-priv.h"
 #include <linux/module.h>
+#include <linux/jiffies.h>
 
 #define RC5_NBITS		14
 #define RC5X_NBITS		20
@@ -31,6 +32,8 @@
 #define RC5_BIT_END		(1 * RC5_UNIT)
 #define RC5X_SPACE		(4 * RC5_UNIT)
 
+
+
 enum rc5_state {
 	STATE_INACTIVE,
 	STATE_BIT_START,
@@ -38,6 +41,30 @@ enum rc5_state {
 	STATE_CHECK_RC5X,
 	STATE_FINISHED,
 };
+
+ static int  ir_rc5_keydown(struct rc_dev *dev, int scancode, u8 toggle)
+ {
+    bool new_eventtoggle = dev->last_toggle != toggle;
+    static u8 repeat_num;
+
+    if (!new_eventtoggle) {
+		++repeat_num;
+	}
+
+    if (new_eventtoggle && scancode != 0) {
+		dev->last_toggle = toggle;
+		repeat_num = 0;
+    }
+
+    if (1 == repeat_num) {
+		return 0;
+	} else{
+		rc_keydown(dev, scancode, toggle);
+	}
+
+	return 1;
+}
+
 
 /**
  * ir_rc5_decode() - Decode one RC-5 pulse or space
@@ -51,7 +78,6 @@ static int ir_rc5_decode(struct rc_dev *dev, struct ir_raw_event ev)
 	struct rc5_dec *data = &dev->raw->rc5;
 	u8 toggle;
 	u32 scancode;
-
 	if (!(dev->enabled_protocols & (RC_BIT_RC5 | RC_BIT_RC5X)))
 		return 0;
 
@@ -158,8 +184,7 @@ again:
 			IR_dprintk(1, "RC5 scancode 0x%04x (toggle: %u)\n",
 				   scancode, toggle);
 		}
-
-		rc_keydown(dev, scancode, toggle);
+		ir_rc5_keydown(dev, scancode, toggle);
 		data->state = STATE_INACTIVE;
 		return 0;
 	}
@@ -179,7 +204,6 @@ static struct ir_raw_handler rc5_handler = {
 static int __init ir_rc5_decode_init(void)
 {
 	ir_raw_handler_register(&rc5_handler);
-
 	printk(KERN_INFO "IR RC5(x) protocol handler initialized\n");
 	return 0;
 }

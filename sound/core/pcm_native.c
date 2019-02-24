@@ -1801,6 +1801,7 @@ const struct snd_pcm_hw_constraint_list snd_pcm_known_rates = {
 	.list = rates,
 };
 
+
 static int snd_pcm_hw_rule_rate(struct snd_pcm_hw_params *params,
 				struct snd_pcm_hw_rule *rule)
 {
@@ -2179,6 +2180,7 @@ static int snd_pcm_open(struct file *file, struct snd_pcm *pcm, int stream)
 		err = snd_pcm_open_file(file, pcm, stream);
 		if (err >= 0)
 			break;
+
 		if (err == -EAGAIN) {
 			if (file->f_flags & O_NONBLOCK) {
 				err = -EBUSY;

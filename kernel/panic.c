@@ -22,9 +22,17 @@
 #include <linux/sysrq.h>
 #include <linux/init.h>
 #include <linux/nmi.h>
+#include <linux/cpu.h>
+#include <linux/cpumask.h>
+#include <linux/arisc/arisc.h>
+
+#include <asm/cacheflush.h>
 
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
+
+/* Machine specific panic information string */
+char *mach_panic_string;
 
 int panic_on_oops = CONFIG_PANIC_ON_OOPS_VALUE;
 static unsigned long tainted_mask;
@@ -32,7 +40,10 @@ static int pause_on_oops;
 static int pause_on_oops_flag;
 static DEFINE_SPINLOCK(pause_on_oops_lock);
 
-int panic_timeout;
+#ifndef CONFIG_PANIC_TIMEOUT
+#define CONFIG_PANIC_TIMEOUT 0
+#endif
+int panic_timeout = CONFIG_PANIC_TIMEOUT;
 EXPORT_SYMBOL_GPL(panic_timeout);
 
 ATOMIC_NOTIFIER_HEAD(panic_notifier_list);
@@ -171,6 +182,26 @@ void panic(const char *fmt, ...)
 		disabled_wait(caller);
 	}
 #endif
+
+#if defined(CONFIG_SUNXI_DUMP)
+	flush_cache_all();
+	{
+		unsigned int i;
+
+		for (i = 0; i < num_possible_cpus(); i++) {
+			if (i == smp_processor_id())
+				continue;
+
+			while (1) {
+				if (!cpu_online(i))
+					break;
+				mdelay(10);
+			}
+		}
+		arisc_set_crashdump_mode();
+	}
+#endif
+
 	local_irq_enable();
 	for (i = 0; ; i += PANIC_TIMER_STEP) {
 		touch_softlockup_watchdog();
@@ -375,6 +406,11 @@ late_initcall(init_oops_id);
 void print_oops_end_marker(void)
 {
 	init_oops_id();
+
+	if (mach_panic_string)
+		printk(KERN_WARNING "Board Information: %s\n",
+		       mach_panic_string);
+
 	printk(KERN_WARNING "---[ end trace %016llx ]---\n",
 		(unsigned long long)oops_id);
 }

@@ -324,10 +324,7 @@ static void crypto_wait_for_test(struct crypto_larval *larval)
 			goto out;
 		crypto_alg_tested(larval->alg.cra_driver_name, 0);
 	}
-
 	err = wait_for_completion_interruptible(&larval->completion);
-	WARN_ON(err);
-
 out:
 	crypto_larval_kill(&larval->alg);
 }

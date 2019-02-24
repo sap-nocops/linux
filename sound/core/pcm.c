@@ -933,7 +933,7 @@ int snd_pcm_attach_substream(struct snd_pcm *pcm, int stream,
 			break;
       __ok:
 	if (substream == NULL)
-		return -EAGAIN;
+		return -EBUSY;
 
 	runtime = kzalloc(sizeof(*runtime), GFP_KERNEL);
 	if (runtime == NULL)

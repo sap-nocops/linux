@@ -42,6 +42,14 @@ extern void mcpm_entry_point(void);
 void mcpm_set_entry_vector(unsigned cpu, unsigned cluster, void *ptr);
 
 /*
+ * This sets an early poke i.e a value to be poked into some address
+ * from very early assembly code before the CPU is ungated.  The
+ * address must be physical, and if 0 then nothing will happen.
+ */
+void mcpm_set_early_poke(unsigned cpu, unsigned cluster,
+			 unsigned long poke_phys_addr, unsigned long poke_val);
+
+/*
  * CPU/cluster power operations API for higher subsystems to use.
  */
 
@@ -114,6 +122,10 @@ void mcpm_cpu_suspend(u64 expected_residency);
  */
 int mcpm_cpu_powered_up(void);
 
+void mcpm_smp_init_cpus(void);
+int  mcpm_cpu_kill(unsigned int cpu);
+int  mcpm_cpu_disable(unsigned int cpu);
+
 /*
  * Platform specific methods used in the implementation of the above API.
  */
@@ -122,6 +134,11 @@ struct mcpm_platform_ops {
 	void (*power_down)(void);
 	void (*suspend)(u64);
 	void (*powered_up)(void);
+
+	/* add by allwinner sunny to support stardard smp ops */
+	void (*smp_init_cpus)(void);
+	int  (*cpu_kill)(unsigned int cpu);
+	int  (*cpu_disable)(unsigned int cpu);
 };
 
 /**
