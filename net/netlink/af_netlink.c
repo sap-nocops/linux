@@ -262,8 +262,10 @@ static int __netlink_deliver_tap_skb(struct sk_buff *skb,
 	struct sock *sk = skb->sk;
 	int ret = -ENOMEM;
 
-	if (!net_eq(dev_net(dev), sock_net(sk)))
+	if (!net_eq(dev_net(dev), sock_net(sk)) &&
+		!net_eq(dev_net(dev), &init_net)) {
 		return 0;
+	}
 
 	dev_hold(dev);
 
@@ -985,11 +987,6 @@ static int netlink_bind(struct socket *sock, struct sockaddr *addr,
 		if (err)
 			return err;
 	}
-
-	if (nlk->ngroups == 0)
-		groups = 0;
-	else if (nlk->ngroups < 8*sizeof(groups))
-		groups &= (1UL << nlk->ngroups) - 1;
 
 	bound = nlk->bound;
 	if (bound) {
