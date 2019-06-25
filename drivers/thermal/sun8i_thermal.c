@@ -33,7 +33,23 @@
 #define SUN8I_THS_IS				0x48
 #define SUN8I_THS_MFC				0x70
 #define SUN8I_THS_TEMP_CALIB			0x74
+#define SUN8I_THS_TEMP_CALIB2			0x78
 #define SUN8I_THS_TEMP_DATA			0x80
+#define SUN8I_THS_TEMP_DATA1			0x84
+#define SUN8I_THS_TEMP_DATA2			0x88
+
+#if 0
+#define SUN8I_THS_CTRL0		0x00
+#define SUN8I_THS_CTRL2		0x40
+#define SUN8I_THS_INT_CTRL	0x44
+#define SUN8I_THS_STAT		0x48
+#define SUN8I_THS_FILTER	0x70
+#define SUN8I_THS_CDATA01	0x74
+#define SUN8I_THS_CDATA2	0x78
+#define SUN8I_THS_DATA0		0x80
+#define SUN8I_THS_DATA1		0x84
+#define SUN8I_THS_DATA2		0x88
+#endif
 
 #define SUN50I_THS_CTRL0			0x00
 #define SUN50I_H6_THS_ENABLE			0x04
@@ -180,10 +196,38 @@ static irqreturn_t sun8i_irq_thread(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int sun8i_h3_ths_calibrate(struct ths_device *tmdev,
-			       u16 *caldata, int callen)
+static int sun8i_a83t_ths_calibrate(struct ths_device *tmdev,
+				    u16 *caldata, int callen)
 {
+	if (callen != 8)
+		return -EINVAL;
+
+	regmap_write(tmdev->regmap, SUN8I_THS_TEMP_CALIB,
+		     (u32)caldata[0] | (u32)caldata[1] << 16);
+	regmap_write(tmdev->regmap, SUN8I_THS_TEMP_CALIB2, caldata[2]);
+
+	return 0;
+}
+
+static int sun8i_h3_ths_calibrate(struct ths_device *tmdev,
+				  u16 *caldata, int callen)
+{
+	if (callen != 4)
+		return -EINVAL;
+
 	regmap_write(tmdev->regmap, SUN8I_THS_TEMP_CALIB, *caldata);
+
+	return 0;
+}
+
+static int sun8i_h5_ths_calibrate(struct ths_device *tmdev,
+				  u16 *caldata, int callen)
+{
+	if (callen != 4)
+		return -EINVAL;
+
+	regmap_write(tmdev->regmap, SUN8I_THS_TEMP_CALIB,
+		     (u32)caldata[0] | (u32)caldata[1] << 16);
 
 	return 0;
 }
@@ -359,6 +403,32 @@ assert_reset:
 	return ret;
 }
 
+static int sun8i_a83t_thermal_init(struct ths_device *tmdev)
+{
+	/* average over 4 samples */
+	regmap_write(tmdev->regmap, SUN8I_THS_MFC,
+		     SUN50I_THS_FILTER_EN |
+		     SUN50I_THS_FILTER_TYPE(1));
+	/*
+	 * period = (x + 1) * 4096 / clkin; ~10ms
+	 * enable data interrupt
+	 */
+	regmap_write(tmdev->regmap, SUN8I_THS_IC,
+		     SUN50I_H6_THS_PC_TEMP_PERIOD(58) | BIT(8));
+	/*
+	 * clkin = 24MHz
+	 * T acquire = clkin / (x + 1)
+	 *           = 20us
+	 * enable sensor
+	 */
+	regmap_write(tmdev->regmap, SUN8I_THS_CTRL0,
+		     SUN8I_THS_CTRL0_T_ACQ0(479));
+	regmap_write(tmdev->regmap, SUN8I_THS_CTRL2,
+		     SUN8I_THS_CTRL2_T_ACQ1(479) | BIT(0));
+
+	return 0;
+}
+
 static int sun8i_h3_thermal_init(struct ths_device *tmdev)
 {
 	/* average over 4 samples */
@@ -491,6 +561,121 @@ static int sun8i_ths_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if 0
+#define THS_SUN8I_CTRL0_SENSOR_ACQ0(x)		(x)
+#define THS_SUN8I_CTRL2_SENSE_EN0		BIT(0)
+#define THS_SUN8I_CTRL2_SENSE_EN1		BIT(1)
+#define THS_SUN8I_CTRL2_SENSE_EN2		BIT(2)
+#define THS_SUN8I_CTRL2_SENSOR_ACQ1(x)		((x) << 16)
+#define THS_SUN8I_INT_CTRL_DATA0_IRQ_EN		BIT(8)
+#define THS_SUN8I_INT_CTRL_DATA1_IRQ_EN		BIT(9)
+#define THS_SUN8I_INT_CTRL_DATA2_IRQ_EN		BIT(10)
+#define THS_SUN8I_INT_CTRL_THERMAL_PER(x)	((x) << 12)
+#define THS_SUN8I_STAT_DATA0_IRQ_STS		BIT(8)
+#define THS_SUN8I_STAT_DATA1_IRQ_STS		BIT(9)
+#define THS_SUN8I_STAT_DATA2_IRQ_STS		BIT(10)
+#define THS_SUN8I_STAT_CLEAR			0x777
+#define THS_SUN8I_FILTER_TYPE(x)		((x) << 0)
+#define THS_SUN8I_FILTER_EN			BIT(2)
+
+#define THS_SUN8I_CLK_IN		40000000 /* Hz */
+#define THS_SUN8I_DATA_PERIOD		330 /* ms */
+#define THS_SUN8I_FILTER_TYPE_VALUE	2 /* average over 2^(n+1) samples */
+
+//XXX: this formula doesn't work for A83T very well
+//XXX: A83T is getting slower readings out of this (1s interval?)
+//perhaps configure this in sun8i_ths_desc
+#define THS_SUN8I_FILTER_DIV		(1 << (THS_SUN8I_FILTER_TYPE_VALUE + 1))
+#define THS_SUN8I_INT_CTRL_THERMAL_PER_VALUE \
+	(THS_SUN8I_DATA_PERIOD * (THS_SUN8I_CLK_IN / 1000) / \
+	 THS_SUN8I_FILTER_DIV / 4096 - 1)
+
+#define THS_SUN8I_CTRL0_SENSOR_ACQ0_VALUE	0x3f /* 16us */
+#define THS_SUN8I_CTRL2_SENSOR_ACQ1_VALUE	0x3f
+
+#define SUN8I_THS_MAX_TZDS 3
+
+static int sun8i_ths_calc_temp_a83t(u32 reg_val)
+{
+	uint64_t temp = (uint64_t)reg_val * 1000000ll;
+
+        do_div(temp, 14186);
+
+	return 192000 - (int)temp;
+}
+
+static void sun8i_ths_init(struct sun8i_ths_data *data)
+{
+	int i;
+	u32 int_ctrl = 0;
+	u32 ctrl2 = 0;
+
+	writel(THS_SUN8I_CTRL0_SENSOR_ACQ0(THS_SUN8I_CTRL0_SENSOR_ACQ0_VALUE),
+		data->regs + THS_SUN8I_CTRL0);
+	writel(THS_SUN8I_FILTER_EN | THS_SUN8I_FILTER_TYPE(THS_SUN8I_FILTER_TYPE_VALUE),
+		data->regs + THS_SUN8I_FILTER);
+
+	ctrl2 |= THS_SUN8I_CTRL2_SENSOR_ACQ1(THS_SUN8I_CTRL2_SENSOR_ACQ1_VALUE);
+	int_ctrl |= THS_SUN8I_INT_CTRL_THERMAL_PER(THS_SUN8I_INT_CTRL_THERMAL_PER_VALUE);
+
+	for (i = 0; i < data->desc->num_sensors; i++) {
+		ctrl2 |= data->desc->sensors[i].sense_en;
+		int_ctrl |= data->desc->sensors[i].data_int_en;
+	}
+
+	if (data->cal_regs) {
+		u32 cal0, cal1;
+
+		cal0 = readl(data->cal_regs);
+		if (cal0)
+			writel(cal0, data->regs + THS_SUN8I_CDATA01);
+
+		if (data->desc->has_cal1) {
+			cal1 = readl(data->cal_regs + 4);
+			if (cal1)
+				writel(cal1, data->regs + THS_SUN8I_CDATA2);
+		}
+	}
+
+	writel(ctrl2, data->regs + THS_SUN8I_CTRL2);
+
+	/* enable interrupts */
+	writel(int_ctrl, data->regs + THS_SUN8I_INT_CTRL);
+}
+
+struct sun8i_ths_sensor_desc sun8i_ths_a83t_sensors[] = {
+	{
+		.data_int_en = THS_SUN8I_INT_CTRL_DATA0_IRQ_EN,
+		.data_int_flag = THS_SUN8I_STAT_DATA0_IRQ_STS,
+		.data_offset = THS_SUN8I_DATA0,
+		.sense_en = THS_SUN8I_CTRL2_SENSE_EN0,
+	},
+	{
+		.data_int_en = THS_SUN8I_INT_CTRL_DATA1_IRQ_EN,
+		.data_int_flag = THS_SUN8I_STAT_DATA1_IRQ_STS,
+		.data_offset = THS_SUN8I_DATA1,
+		.sense_en = THS_SUN8I_CTRL2_SENSE_EN1,
+	},
+	{
+		.data_int_en = THS_SUN8I_INT_CTRL_DATA2_IRQ_EN,
+		.data_int_flag = THS_SUN8I_STAT_DATA2_IRQ_STS,
+		.data_offset = THS_SUN8I_DATA2,
+		.sense_en = THS_SUN8I_CTRL2_SENSE_EN2,
+	},
+};
+#endif
+
+static const struct ths_thermal_chip sun8i_a83t_ths = {
+	.sensor_num = 3,
+	.offset = -1794,
+	.scale = -121,
+	.has_ahb_clk = true,
+	.temp_data_base = SUN8I_THS_TEMP_DATA,
+	.calibrate = sun8i_a83t_ths_calibrate,
+	.init = sun8i_a83t_thermal_init,
+	.irq_ack = sun8i_a83t_irq_ack,
+};
+
 static const struct ths_thermal_chip sun8i_h3_ths = {
 	.sensor_num = 1,
 	.offset = -1794,
@@ -514,6 +699,7 @@ static const struct ths_thermal_chip sun50i_h6_ths = {
 };
 
 static const struct of_device_id of_ths_match[] = {
+	{ .compatible = "allwinner,sun8i-a83t-ths", .data = &sun8i_a83t_ths },
 	{ .compatible = "allwinner,sun8i-h3-ths", .data = &sun8i_h3_ths },
 	{ .compatible = "allwinner,sun50i-h6-ths", .data = &sun50i_h6_ths },
 	{ /* sentinel */ },
