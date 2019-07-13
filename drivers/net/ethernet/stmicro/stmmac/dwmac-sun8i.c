@@ -17,6 +17,7 @@
 #include <linux/phy.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/reboot.h>
 #include <linux/regmap.h>
 #include <linux/stmmac.h>
 
@@ -60,6 +61,7 @@ struct emac_variant {
  * @tx_clk:	reference to MAC TX clock
  * @ephy_clk:	reference to the optional EPHY clock for the internal PHY
  * @regulator:	reference to the optional regulator
+ * @regulator2:	reference to the optional regulator2
  * @rst_ephy:	reference to the optional EPHY reset for the internal PHY
  * @variant:	reference to the current board variant
  * @regmap:	regmap for using the syscon
@@ -70,11 +72,13 @@ struct sunxi_priv_data {
 	struct clk *tx_clk;
 	struct clk *ephy_clk;
 	struct regulator *regulator;
+	struct regulator *regulator2;
 	struct reset_control *rst_ephy;
 	const struct emac_variant *variant;
 	struct regmap_field *regmap_field;
 	bool internal_phy_powered;
 	void *mux_handle;
+	struct notifier_block reboot_nb;
 };
 
 /* EMAC clock register @ 0x30 in the "system control" address range */
@@ -130,6 +134,20 @@ static const struct emac_variant emac_variant_r40 = {
 static const struct emac_variant emac_variant_a64 = {
 	.default_syscon_value = 0,
 	.syscon_field = &sun8i_syscon_reg_field,
+	.soc_has_internal_phy = false,
+	.support_mii = true,
+	.support_rmii = true,
+	.support_rgmii = true,
+	.rx_delay_max = 31,
+	.tx_delay_max = 7,
+};
+
+static const struct emac_variant emac_variant_h6 = {
+	.default_syscon_value = 0x50000,
+	.syscon_field = &sun8i_syscon_reg_field,
+	/* The "Internal PHY" of H6 is not on the die. It's on the
+	 * co-packaged AC200 chip instead.
+	 */
 	.soc_has_internal_phy = false,
 	.support_mii = true,
 	.support_rmii = true,
@@ -522,15 +540,33 @@ static int sun8i_dwmac_init(struct platform_device *pdev, void *priv)
 		}
 	}
 
-	ret = clk_prepare_enable(gmac->tx_clk);
-	if (ret) {
-		if (gmac->regulator)
-			regulator_disable(gmac->regulator);
-		dev_err(&pdev->dev, "Could not enable AHB clock\n");
-		return ret;
+	if (gmac->regulator2) {
+		ret = regulator_enable(gmac->regulator2);
+		if (ret) {
+			dev_err(&pdev->dev, "Fail to enable regulator2\n");
+			goto err_disable_regulator;
+		}
 	}
 
+	ret = clk_prepare_enable(gmac->tx_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "Could not enable AHB clock\n");
+		goto err_disable_regulator2;
+	}
+
+	msleep(100);
+
 	return 0;
+
+err_disable_regulator:
+	if (gmac->regulator)
+		regulator_disable(gmac->regulator);
+
+err_disable_regulator2:
+	if (gmac->regulator2)
+		regulator_disable(gmac->regulator2);
+
+	return ret;
 }
 
 static void sun8i_dwmac_core_init(struct mac_device_info *hw,
@@ -884,6 +920,11 @@ static int sun8i_dwmac_set_syscon(struct stmmac_priv *priv)
 		 * address. No need to mask it again.
 		 */
 		reg |= 1 << H3_EPHY_ADDR_SHIFT;
+	} else {
+		/* For SoCs without internal PHY the PHY selection bit should be
+		 * set to 0 (external PHY).
+		 */
+		reg &= ~H3_EPHY_SELECT;
 	}
 
 	if (!of_property_read_u32(node, "allwinner,tx-delay-ps", &val)) {
@@ -975,6 +1016,9 @@ static void sun8i_dwmac_exit(struct platform_device *pdev, void *priv)
 
 	if (gmac->regulator)
 		regulator_disable(gmac->regulator);
+
+	if (gmac->regulator2)
+		regulator_disable(gmac->regulator2);
 }
 
 static const struct stmmac_ops sun8i_dwmac_ops = {
@@ -1061,6 +1105,20 @@ out_put_node:
 	return regmap;
 }
 
+
+static int sun8i_dwmac_reboot_notifier(struct notifier_block *nb, unsigned long action, void *data)
+{
+	struct sunxi_priv_data *gmac = container_of(nb, struct sunxi_priv_data, reboot_nb);
+
+	if (gmac->regulator)
+		regulator_disable(gmac->regulator);
+
+	if (gmac->regulator2)
+		regulator_disable(gmac->regulator2);
+	
+	return NOTIFY_DONE;
+}
+
 static int sun8i_dwmac_probe(struct platform_device *pdev)
 {
 	struct plat_stmmacenet_data *plat_dat;
@@ -1103,6 +1161,22 @@ static int sun8i_dwmac_probe(struct platform_device *pdev)
 			return -EPROBE_DEFER;
 		dev_info(dev, "No regulator found\n");
 		gmac->regulator = NULL;
+	}
+
+	/* Optional regulator2 for PHY */
+	gmac->regulator2 = devm_regulator_get_optional(dev, "phy2");
+	if (IS_ERR(gmac->regulator2)) {
+		if (PTR_ERR(gmac->regulator2) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		dev_info(dev, "No regulator2 found\n");
+		gmac->regulator2 = NULL;
+	}
+
+	gmac->reboot_nb.notifier_call = sun8i_dwmac_reboot_notifier;
+	ret = devm_register_reboot_notifier(dev, &gmac->reboot_nb);
+	if (ret) {
+		dev_err(dev, "Failed to register reboot notifier (%d)\n", ret);
+		return ret;
 	}
 
 	/* The "GMAC clock control" register might be located in the
@@ -1203,6 +1277,8 @@ static const struct of_device_id sun8i_dwmac_match[] = {
 		.data = &emac_variant_r40 },
 	{ .compatible = "allwinner,sun50i-a64-emac",
 		.data = &emac_variant_a64 },
+	{ .compatible = "allwinner,sun50i-h6-emac",
+		.data = &emac_variant_h6 },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, sun8i_dwmac_match);
