@@ -1,0 +1,275 @@
+/*
+ * Copyright 2019 Ondrej Jirman <megous@megous.com>
+ */
+
+/dts-v1/;
+#include "sun5i-a13.dtsi"
+#include "sunxi-common-regulators.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/pwm/pwm.h>
+
+/ {
+	model = "PocketBook Touch Lux 3";
+	compatible = "pocketbook,touch-lux-3", "allwinner,sun5i-a13";
+
+	aliases {
+		serial0 = &uart1;
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm 0 50000 PWM_POLARITY_INVERTED>;
+		enable-gpios = <&pio 1 4 GPIO_ACTIVE_LOW>; /* PB4 */
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		default-brightness-level = <8>;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		power {
+			gpios = <&pio 4 8 GPIO_ACTIVE_LOW>; /* PE8 */
+			default-state = "on";
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		autorepeat;
+		label = "GPIO Keys";
+
+		key-right {
+			label = "Right";
+			linux,code = <KEY_RIGHT>;
+			gpios = <&pio 6 9 GPIO_ACTIVE_LOW>; /* PG9 */
+		};
+
+		key-left {
+			label = "Left";
+			linux,code = <KEY_LEFT>;
+			gpios = <&pio 6 10 GPIO_ACTIVE_LOW>; /* PG10 */
+		};
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&reg_dcdc2>;
+};
+
+&ehci0 {
+	status = "okay";
+};
+
+&ohci0 {
+	status = "okay";
+};
+
+&i2c0 {
+	status = "okay";
+
+	axp209: pmic@34 {
+		reg = <0x34>;
+		interrupts = <0>;
+	};
+};
+
+#include "axp209.dtsi"
+
+&i2c1 {
+	status = "okay";
+
+	pcf8563: rtc@51 {
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+	};
+
+	//TODO: pmic for edp (does not fit the regulator
+	// framework nicely and is tightly coupled to edp)
+};
+
+&i2c2 {
+	status = "okay";
+
+        touchscreen@24 {
+                compatible = "cy,cyttsp4_i2c_adapter";
+                reg = <0x24>;
+
+		//interrupt-parent = <&pio>;
+		//interrupts = <6 11 IRQ_TYPE_EDGE_FALLING>; /* EINT11 (PG11) */
+
+                cy,adapter_id = "cyttsp4_i2c_adapter";
+
+                cy,core {
+                        cy,name = "cyttsp4_core";
+                        cy,id = "main_ttsp_core";
+
+                        cy,irq_gpio = <203>;  /* PG11 */
+                        cy,rst_gpio = <35>; /* PB3 */
+                        cy,pwr_gpio = <133>; /* PE5 */
+
+                        cy,flags = <0>;
+                        // not supported on the chip
+                        cy,easy_wakeup_gesture = <0>;
+
+                        cy,mt {
+                                cy,name = "cyttsp4_mt";
+
+                                cy,inp_dev_name = "cyttsp4_mt";
+
+                                /* CY_MT_FLAG_NONE */
+                                cy,flags = <0>;
+                                cy,abs = <
+                                        /* ABS_MT_POSITION_X, CY_ABS_MIN_X, CY_ABS_MAX_X, 0, 0 */
+					0x35    0          0x370 0 0
+                                        /* ABS_MT_POSITION_Y, CY_ABS_MIN_Y, CY_ABS_MAX_Y, 0, 0 */
+					0x36    0          0x500 0 0
+                                        /* ABS_MT_PRESSURE, CY_ABS_MIN_P, CY_ABS_MAX_P, 0, 0 */
+					0x3A    0          0xFF  0 0 
+                                        /* CY_IGNORE_VALUE, CY_ABS_MIN_W, CY_ABS_MAX_W, 0, 0 */
+					0xFFff  0          0xFF  0 0
+                                        /* ABS_MT_TRACKING_ID, CY_ABS_MIN_T, CY_ABS_MAX_T, 0, 0 */
+					0x39    0          0xF   0 0
+                                        /* ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0 */
+					0x30    0          0xFF  0 0
+                                        /* ABS_MT_TOUCH_MINOR, 0, 255, 0, 0 */
+					0x31    0          0xFF  0 0
+                                        /* ABS_MT_ORIENTATION, -127, 127, 0, 0 */
+					0x34    0xffffff81 0x7F  0 0
+					/* ??? */
+					0x37    0          1     0 0
+					0x19    0          0xFF  0 0
+				>;
+
+//                                cy,vkeys_x = <1024>;
+//                                cy,vkeys_y = <758>;
+                                cy,vkeys_x = <720>;
+                                cy,vkeys_y = <1280>;
+                        };  
+
+                        cy,btn {
+                                cy,name = "cyttsp4_btn";
+                                cy,inp_dev_name = "cyttsp4_btn";
+                        };  
+
+                        cy,proximity {
+                                cy,name = "cyttsp4_proximity";
+
+                                cy,inp_dev_name = "cyttsp4_proximity";
+                                cy,abs =
+                                        /* ABS_DISTANCE, CY_PROXIMITY_MIN_VAL, CY_PROXIMITY_MAX_VAL, 0, 0 */
+                                        <0x19 0 1 0 0>;
+                        };  
+                };
+	};
+};
+
+&lradc {
+	vref-supply = <&reg_ldo2>;
+	status = "okay";
+
+	button-200 {
+		label = "Home";
+		linux,code = <KEY_HOME>;
+		channel = <0>;
+		voltage = <200000>;
+	};
+
+	button-400 {
+		label = "Menu";
+		linux,code = <KEY_MENU>;
+		channel = <0>;
+		voltage = <400000>;
+	};
+};
+
+&mmc0 {
+	vmmc-supply = <&reg_vcc3v3>;
+	bus-width = <4>;
+	cd-gpios = <&pio 6 0 GPIO_ACTIVE_LOW>; /* PG0 */
+	enable-gpios = <&pio 4 4 GPIO_ACTIVE_LOW>; /* PE4 */
+	status = "okay";
+};
+
+&mmc2 {
+         pinctrl-names = "default";
+         pinctrl-0 = <&mmc2_4bit_pc_pins>;
+         vmmc-supply = <&reg_vcc3v3>;
+         bus-width = <4>;
+         non-removable;
+         status = "okay";
+};
+
+&otg_sram {
+	status = "okay";
+};
+
+&pwm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm0_pin>;
+	status = "okay";
+};
+
+&reg_dcdc2 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1400000>;
+	regulator-name = "vdd-cpu";
+};
+
+&reg_dcdc3 {
+	regulator-always-on;
+	regulator-min-microvolt = <1200000>;
+	regulator-max-microvolt = <1200000>;
+	regulator-name = "vdd-int-pll";
+};
+
+&reg_ldo1 {
+	regulator-name = "vdd-rtc";
+};
+
+&reg_ldo2 {
+	regulator-always-on;
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+	regulator-name = "avcc";
+};
+
+&reg_ldo3 {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-name = "vcc-wifi";
+	/* We need this otherwise the LDO3 would overload */
+	regulator-soft-start;
+	regulator-ramp-delay = <1600>;
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pg_pins>;
+	status = "okay";
+};
+
+&usb_otg {
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&usbphy {
+	usb0_vbus_det-gpios = <&pio 6 1 GPIO_ACTIVE_HIGH>; /* PG1 */
+	usb1_vbus-supply = <&reg_ldo3>;
+	status = "okay";
+};
+
+&usb_power_supply {
+	status = "okay";
+};
+
+&battery_power_supply {
+	status = "okay";
+};
