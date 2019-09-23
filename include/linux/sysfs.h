@@ -58,6 +58,7 @@ struct attribute_group {
 	mode_t			(*is_visible)(struct kobject *,
 					      struct attribute *, int);
 	struct attribute	**attrs;
+	struct bin_attribute	**bin_attrs;
 };
 
 

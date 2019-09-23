@@ -27,7 +27,9 @@ INITRD_PHYS := $(initrd_phys-y)
 
 export ZRELADDR INITRD_PHYS PARAMS_PHYS
 
-targets := Image zImage xipImage bootpImage uImage
+targets := Image zImage xipImage bootpImage uImage bImage
+
+$(obj)/bImage: OBJCOPYFLAGS := -O binary -R .note.gnu.build-id -S
 
 ifeq ($(CONFIG_XIP_KERNEL),y)
 
@@ -47,6 +49,10 @@ $(obj)/xipImage: FORCE
 	@false
 
 $(obj)/Image: vmlinux FORCE
+	$(call if_changed,objcopy)
+	@echo '  Kernel: $@ is ready'
+
+$(obj)/bImage: vmlinux FORCE
 	$(call if_changed,objcopy)
 	@echo '  Kernel: $@ is ready'
 

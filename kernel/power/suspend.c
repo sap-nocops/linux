@@ -23,13 +23,19 @@
 #include <linux/slab.h>
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
+#include <linux/cpufreq.h>
 #include <trace/events/power.h>
 
 #include "power.h"
 
 const char *const pm_states[PM_SUSPEND_MAX] = {
+#ifdef CONFIG_EARLYSUSPEND
+	[PM_SUSPEND_ON]		= "on",
+#endif
 	[PM_SUSPEND_STANDBY]	= "standby",
 	[PM_SUSPEND_MEM]	= "mem",
+	[PM_SUSPEND_PARTIAL]	= "partial",
+	[PM_SUSPEND_BOOTFAST]	= "bootfast",
 };
 
 static const struct platform_suspend_ops *suspend_ops;
@@ -135,6 +141,8 @@ static int suspend_enter(suspend_state_t state)
 {
 	int error;
 
+	cpufreq_driver_target(cpufreq_cpu_get(0), 1008000, 0);
+
 	if (suspend_ops->prepare) {
 		error = suspend_ops->prepare();
 		if (error)
@@ -162,7 +170,7 @@ static int suspend_enter(suspend_state_t state)
 
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
-
+	
 	error = syscore_suspend();
 	if (!error) {
 		if (!(suspend_test(TEST_CORE) || pm_wakeup_pending())) {
@@ -209,7 +217,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 		if (error)
 			goto Close;
 	}
-	suspend_console();
+	//suspend_console();
 	suspend_test_start();
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
@@ -226,7 +234,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 	suspend_test_start();
 	dpm_resume_end(PMSG_RESUME);
 	suspend_test_finish("resume devices");
-	resume_console();
+	//resume_console();
  Close:
 	if (suspend_ops->end)
 		suspend_ops->end();

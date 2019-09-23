@@ -270,11 +270,50 @@ static int usb_dev_prepare(struct device *dev)
 	return 0;		/* Implement eventually? */
 }
 
+void usb_dev_complete_delay(struct device *dev);
+int usb_dev_resume_delay(struct device *dev);
+int usb_dev_thaw_delay(struct device *dev);
+int usb_dev_restore_delay(struct device *dev);
+
+static DECLARE_DELAYED_WORK(usb_complete_work, usb_dev_complete_delay);
+static DECLARE_DELAYED_WORK(usb_resume_work, usb_dev_resume_delay);
+static DECLARE_DELAYED_WORK(usb_thaw_work, usb_dev_thaw_delay);
+static DECLARE_DELAYED_WORK(usb_restore_work, usb_dev_restore_delay);
+
+#define MAX_USB_DEVS 16
+
+struct device *usb_complete_devs[MAX_USB_DEVS];
+struct device *usb_resume_devs[MAX_USB_DEVS];
+
+struct device *usb_thaw_dev = NULL;
+struct device *usb_restore_dev = NULL;
+	
 static void usb_dev_complete(struct device *dev)
 {
-	/* Currently used only for rebinding interfaces */
-	usb_resume(dev, PMSG_ON);	/* FIXME: change to PMSG_COMPLETE */
+	int i;
+	for (i = 0; i < MAX_USB_DEVS; i++) {
+		if (usb_complete_devs[i] == NULL) {
+			usb_complete_devs[i] = dev;
+			break;
+		}
+	}
+	schedule_delayed_work(&usb_complete_work, (int)(0.6*HZ)); 
 }
+
+void usb_dev_complete_delay(struct device *dev)
+{
+	int i;
+	/* Currently used only for rebinding interfaces */
+	for (i = 0; i < MAX_USB_DEVS; i++) {
+		dev = usb_complete_devs[i];
+		usb_complete_devs[i] = NULL; // processed
+		if (dev == NULL)
+			break;
+		usb_resume(dev, PMSG_ON);	/* FIXME: change to PMSG_COMPLETE */
+	}
+
+}
+EXPORT_SYMBOL(usb_dev_complete_delay);
 
 static int usb_dev_suspend(struct device *dev)
 {
@@ -283,8 +322,31 @@ static int usb_dev_suspend(struct device *dev)
 
 static int usb_dev_resume(struct device *dev)
 {
-	return usb_resume(dev, PMSG_RESUME);
+	int i;
+	for (i = 0; i < MAX_USB_DEVS; i++) {
+		if (usb_resume_devs[i] == NULL) {
+			usb_resume_devs[i] = dev;
+			break;
+		}
+	}
+
+	schedule_delayed_work(&usb_resume_work, (int)(0.4*HZ)); 
+	return 0;
 }
+
+int usb_dev_resume_delay(struct device *dev)
+{
+	int i;
+	for (i = 0; i < MAX_USB_DEVS; i++) {
+		dev = usb_resume_devs[i];
+		usb_resume_devs[i] = NULL; // processed
+		if (dev == NULL)
+			break;
+		usb_resume(dev, PMSG_RESUME);	/* FIXME: change to PMSG_COMPLETE */
+	}
+	return 0;
+}
+EXPORT_SYMBOL(usb_dev_resume_delay);
 
 static int usb_dev_freeze(struct device *dev)
 {
@@ -293,8 +355,17 @@ static int usb_dev_freeze(struct device *dev)
 
 static int usb_dev_thaw(struct device *dev)
 {
+	usb_thaw_dev = dev;
+	schedule_delayed_work(&usb_thaw_work, (int)(0.6*HZ)); 
+	return 0;
+}
+
+int usb_dev_thaw_delay(struct device *dev)
+{
+	dev = usb_thaw_dev;
 	return usb_resume(dev, PMSG_THAW);
 }
+EXPORT_SYMBOL(usb_dev_thaw_delay);
 
 static int usb_dev_poweroff(struct device *dev)
 {
@@ -303,8 +374,17 @@ static int usb_dev_poweroff(struct device *dev)
 
 static int usb_dev_restore(struct device *dev)
 {
+	usb_restore_dev = dev;
+	schedule_delayed_work(&usb_restore_work, (int)(0.6*HZ)); 
+	return 0;
+}
+
+int usb_dev_restore_delay(struct device *dev)
+{
+	dev = usb_restore_dev;
 	return usb_resume(dev, PMSG_RESTORE);
 }
+EXPORT_SYMBOL(usb_dev_restore_delay);
 
 static const struct dev_pm_ops usb_device_pm_ops = {
 	.prepare =	usb_dev_prepare,

@@ -196,6 +196,11 @@ machine-$(CONFIG_MACH_SPEAR300)		:= spear3xx
 machine-$(CONFIG_MACH_SPEAR310)		:= spear3xx
 machine-$(CONFIG_MACH_SPEAR320)		:= spear3xx
 machine-$(CONFIG_MACH_SPEAR600)		:= spear6xx
+machine-$(CONFIG_ARCH_SUN4I)		:= sun4i
+machine-$(CONFIG_ARCH_SUN5I)		:= sun5i
+machine-$(CONFIG_ARCH_SUN6I)		:= sun6i
+
+
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
@@ -265,6 +270,8 @@ else
 KBUILD_IMAGE := zImage
 endif
 
+KBUILD_AFLAGS += -mtune=cortex-a8 -mfpu=neon
+
 all:	$(KBUILD_IMAGE)
 
 boot := arch/arm/boot
@@ -275,7 +282,7 @@ archprepare:
 # Convert bzImage to zImage
 bzImage: zImage
 
-zImage Image xipImage bootpImage uImage: vmlinux
+bImage zImage Image xipImage bootpImage uImage: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $(boot)/$@
 
 zinstall uinstall install: vmlinux

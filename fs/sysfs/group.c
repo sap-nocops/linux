@@ -29,7 +29,8 @@ static void remove_files(struct sysfs_dirent *dir_sd, struct kobject *kobj,
 static int create_files(struct sysfs_dirent *dir_sd, struct kobject *kobj,
 			const struct attribute_group *grp, int update)
 {
-	struct attribute *const* attr;
+	struct attribute *const *attr;
+	struct bin_attribute *const *bin_attr;
 	int error = 0, i;
 
 	for (i = 0, attr = grp->attrs; *attr && !error; i++, attr++) {
@@ -50,6 +51,19 @@ static int create_files(struct sysfs_dirent *dir_sd, struct kobject *kobj,
 		if (unlikely(error))
 			break;
 	}
+
+	if (grp->bin_attrs) {
+		for (bin_attr = grp->bin_attrs; *bin_attr; bin_attr++) {
+			if (update)
+				 sysfs_remove_bin_file(kobj, *bin_attr);
+			error = sysfs_create_bin_file(kobj, *bin_attr);
+			if (error)
+				break;
+		}
+		if (error)
+			remove_files(dir_sd, kobj, grp);
+	}
+
 	if (error)
 		remove_files(dir_sd, kobj, grp);
 	return error;

@@ -476,6 +476,7 @@ static int set_config(struct usb_composite_dev *cdev,
 	power = c->bMaxPower ? (2 * c->bMaxPower) : CONFIG_USB_GADGET_VBUS_DRAW;
 done:
 	usb_gadget_vbus_draw(gadget, power);
+
 	if (result >= 0 && cdev->delayed_status)
 		result = USB_GADGET_DELAYED_STATUS;
 	return result;
@@ -523,6 +524,7 @@ int usb_add_config(struct usb_composite_dev *cdev,
 
 	INIT_LIST_HEAD(&config->functions);
 	config->next_interface_id = 0;
+	memset(config->interface, '\0', sizeof(config->interface));
 
 	status = bind(config);
 	if (status < 0) {
@@ -560,6 +562,48 @@ done:
 		DBG(cdev, "added config '%s'/%u --> %d\n", config->label,
 				config->bConfigurationValue, status);
 	return status;
+}
+
+static int remove_config(struct usb_composite_dev *cdev,
+			      struct usb_configuration *config)
+{
+	while (!list_empty(&config->functions)) {
+		struct usb_function		*f;
+
+		f = list_first_entry(&config->functions,
+				struct usb_function, list);
+		list_del(&f->list);
+		if (f->unbind) {
+			DBG(cdev, "unbind function '%s'/%p\n", f->name, f);
+			f->unbind(config, f);
+			/* may free memory for "f" */
+		}
+	}
+	list_del(&config->list);
+	if (config->unbind) {
+		DBG(cdev, "unbind config '%s'/%p\n", config->label, config);
+		config->unbind(config);
+			/* may free memory for "c" */
+	}
+
+    usb_ep_autoconfig_reset(cdev->gadget);
+
+	return 0;
+}
+
+int usb_remove_config(struct usb_composite_dev *cdev,
+		      struct usb_configuration *config)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&cdev->lock, flags);
+
+	if (cdev->config == config)
+		reset_config(cdev);
+
+	spin_unlock_irqrestore(&cdev->lock, flags);
+
+	return remove_config(cdev, config);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -1041,28 +1085,9 @@ composite_unbind(struct usb_gadget *gadget)
 
 	while (!list_empty(&cdev->configs)) {
 		struct usb_configuration	*c;
-
 		c = list_first_entry(&cdev->configs,
 				struct usb_configuration, list);
-		while (!list_empty(&c->functions)) {
-			struct usb_function		*f;
-
-			f = list_first_entry(&c->functions,
-					struct usb_function, list);
-			list_del(&f->list);
-			if (f->unbind) {
-				DBG(cdev, "unbind function '%s'/%p\n",
-						f->name, f);
-				f->unbind(c, f);
-				/* may free memory for "f" */
-			}
-		}
-		list_del(&c->list);
-		if (c->unbind) {
-			DBG(cdev, "unbind config '%s'/%p\n", c->label, c);
-			c->unbind(c);
-			/* may free memory for "c" */
-		}
+		remove_config(cdev, c);
 	}
 	if (composite->unbind)
 		composite->unbind(cdev);
@@ -1347,5 +1372,129 @@ void usb_composite_setup_continue(struct usb_composite_dev *cdev)
 	}
 
 	spin_unlock_irqrestore(&cdev->lock, flags);
+}
+
+
+//-------------------------------------------------------------------------
+//
+//     add by javen
+//
+//-------------------------------------------------------------------------
+
+#include <mach/sys_config.h>
+
+static s32 get_android_config(struct android_usb_config *config)
+{
+    s32 ret = 0;
+
+    //----------------------------------------
+    //  usb_feature
+    //----------------------------------------
+
+    /* vendor_id */
+    ret = script_parser_fetch("usb_feature", "vendor_id", (int *)&(config->vendor_id), 64);
+	if(ret != 0){
+	    printk("ERR: get usb_feature vendor_id failed\n");
+	}
+
+    /* mass_storage_id */
+    ret = script_parser_fetch("usb_feature", "mass_storage_id", (int *)&(config->mass_storage_id), 64);
+	if(ret != 0){
+	    printk("ERR: get usb_feature mass_storage_id failed\n");
+	}
+
+    /* adb_id */
+    ret = script_parser_fetch("usb_feature", "adb_id", (int *)&(config->adb_id), 64);
+	if(ret != 0){
+	    printk("ERR: get usb_feature adb_id failed\n");
+	}
+
+	/* manufacturer_name */
+    ret = script_parser_fetch("usb_feature", "manufacturer_name", (int *)config->usb_manufacturer_name, 64);
+	if(ret != 0){
+	    printk("ERR: get usb_feature manufacturer_name failed\n");
+	}
+
+	/* product_name */
+    ret = script_parser_fetch("usb_feature", "product_name", (int *)config->usb_product_name, 64);
+	if(ret != 0){
+	    printk("ERR: get usb_feature product_name failed\n");
+	}
+
+	/* serial_number */
+    ret = script_parser_fetch("usb_feature", "serial_number", (int *)config->usb_serial_number, 64);
+	if(ret != 0){
+	    printk("ERR: get usb_feature serial_number failed\n");
+	}
+
+    //----------------------------------------
+    //  msc_feature
+    //----------------------------------------
+
+	/* vendor_name */
+    ret = script_parser_fetch("msc_feature", "vendor_name", (int *)config->msc_vendor_name, 64);
+	if(ret != 0){
+	    printk("ERR: get msc_feature vendor_name failed\n");
+	}
+
+	/* product_name */
+    ret = script_parser_fetch("msc_feature", "product_name", (int *)config->msc_product_name, 64);
+	if(ret != 0){
+	    printk("ERR: get msc_feature product_name failed\n");
+	}
+
+	/* release */
+    ret = script_parser_fetch("msc_feature", "release", (int *)&(config->msc_release), 64);
+	if(ret != 0){
+	    printk("ERR: get msc_feature release failed\n");
+	}
+
+	/* luns */
+    ret = script_parser_fetch("msc_feature", "luns", (int *)&(config->luns), 64);
+	if(ret != 0){
+	    printk("ERR: get msc_feature luns failed\n");
+	}
+
+    return 0;
+}
+
+static void print_android_config(struct android_usb_config *config)
+{
+    printk("------print_msc_config-----\n");
+    printk("vendor_id             = 0x%x\n", config->vendor_id);
+    printk("mass_storage_id       = 0x%x\n", config->mass_storage_id);
+    printk("adb_id                = 0x%x\n", config->adb_id);
+
+    printk("usb_manufacturer_name = %s\n", config->usb_manufacturer_name);
+    printk("usb_product_name      = %s\n", config->usb_product_name);
+    printk("usb_serial_number     = %s\n", config->usb_serial_number);
+
+    printk("msc_vendor_name       = %s\n", config->msc_vendor_name);
+    printk("msc_product_name      = %s\n", config->msc_product_name);
+    printk("msc_release           = %d\n", config->msc_release);
+    printk("luns                  = %d\n", config->luns);
+    printk("---------------------------\n");
+}
+
+static struct android_usb_config g_android_usb_config;
+
+s32 parse_android_usb_config(void)
+{
+    struct android_usb_config *config = &g_android_usb_config;
+
+    memset(config, 0, sizeof(struct android_usb_config));
+
+    get_android_config(config);
+
+    print_android_config(config);
+
+    return 0;
+}
+
+s32 get_android_usb_config(struct android_usb_config *config)
+{
+    memcpy(config, &g_android_usb_config, sizeof(struct android_usb_config));
+
+    return 0;
 }
 

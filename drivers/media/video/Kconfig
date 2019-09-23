@@ -1057,3 +1057,12 @@ config VIDEO_MEM2MEM_TESTDEV
 
 
 endif # V4L_MEM2MEM_DRIVERS
+
+menuconfig VIDEO_CSI_SUN5I
+	bool "CSI Driver Config for sun5i"
+	default m
+	depends on ARCH_SUN5I && VIDEO_DEV && VIDEO_V4L2
+
+if VIDEO_CSI_SUN5I
+source "drivers/media/video/sun5i_csi/Kconfig"
+endif

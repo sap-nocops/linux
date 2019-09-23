@@ -11,6 +11,20 @@ obj-$(CONFIG_SENSORS_ATK0110)	+= asus_atk0110.o
 
 # Native drivers
 # asb100, then w83781d go first, as they can override other drivers' addresses.
+
+
+
+
+
+
+#hxm del
+
+#else
+
+#end
+obj-$(CONFIG_SENSORS_MMA7660)	+= mma7660.o
+obj-$(CONFIG_SENSORS_MMA8452)	+= mma8452.o
+obj-$(CONFIG_SENSORS_DMARD06)	+= dmard06.o
 obj-$(CONFIG_SENSORS_ASB100)	+= asb100.o
 obj-$(CONFIG_SENSORS_W83627HF)	+= w83627hf.o
 obj-$(CONFIG_SENSORS_W83792D)	+= w83792d.o
@@ -118,6 +132,7 @@ obj-$(CONFIG_SENSORS_W83L785TS)	+= w83l785ts.o
 obj-$(CONFIG_SENSORS_W83L786NG)	+= w83l786ng.o
 obj-$(CONFIG_SENSORS_WM831X)	+= wm831x-hwmon.o
 obj-$(CONFIG_SENSORS_WM8350)	+= wm8350-hwmon.o
+obj-$(CONFIG_SENSORS_TPS65185)	+= tps65185-i2c.o
 
 # PMBus drivers
 obj-$(CONFIG_PMBUS)		+= pmbus_core.o

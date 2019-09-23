@@ -28,11 +28,14 @@ static inline void pm_restore_console(void)
 #endif
 
 typedef int __bitwise suspend_state_t;
+extern suspend_state_t g_suspend_state;
 
 #define PM_SUSPEND_ON		((__force suspend_state_t) 0)
 #define PM_SUSPEND_STANDBY	((__force suspend_state_t) 1)
 #define PM_SUSPEND_MEM		((__force suspend_state_t) 3)
-#define PM_SUSPEND_MAX		((__force suspend_state_t) 4)
+#define PM_SUSPEND_PARTIAL		((__force suspend_state_t) 6)
+#define PM_SUSPEND_BOOTFAST		((__force suspend_state_t) 7)
+#define PM_SUSPEND_MAX		((__force suspend_state_t) 8)
 
 /**
  * struct platform_suspend_ops - Callbacks for managing platform dependent

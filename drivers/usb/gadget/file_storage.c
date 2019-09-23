@@ -271,12 +271,12 @@
 
 /*-------------------------------------------------------------------------*/
 
-#define DRIVER_DESC		"File-backed Storage Gadget"
+#define DRIVER_DESC		"PocketBook device"
 #define DRIVER_NAME		"g_file_storage"
 #define DRIVER_VERSION		"1 September 2010"
 
-static       char fsg_string_manufacturer[64];
-static const char fsg_string_product[] = DRIVER_DESC;
+static       char fsg_string_manufacturer[64] = "PocketBook";
+static       char fsg_string_product[64] = DRIVER_DESC;
 static const char fsg_string_config[] = "Self-powered";
 static const char fsg_string_interface[] = "Mass Storage";
 
@@ -326,6 +326,8 @@ static struct {
 	int		protocol_type;
 	char		*protocol_name;
 
+	char 		*product_name;
+
 } mod_data = {					// Default values
 	.transport_parm		= "BBB",
 	.protocol_parm		= "SCSI",
@@ -364,6 +366,9 @@ MODULE_PARM_DESC(stall, "false to prevent bulk stalls");
 
 module_param_named(cdrom, mod_data.cdrom, bool, S_IRUGO);
 MODULE_PARM_DESC(cdrom, "true to emulate cdrom instead of disk");
+
+module_param_named(product_name, mod_data.product_name, charp, S_IRUGO);
+MODULE_PARM_DESC(cdrom, "sets product name");
 
 /* In the non-TEST version, only the module parameters listed above
  * are available. */
@@ -3473,10 +3478,17 @@ static int __init fsg_bind(struct usb_gadget *gadget)
 	/* This should reflect the actual gadget power source */
 	usb_gadget_set_selfpowered(gadget);
 
+/*
 	snprintf(fsg_string_manufacturer, sizeof fsg_string_manufacturer,
 			"%s %s with %s",
 			init_utsname()->sysname, init_utsname()->release,
 			gadget->name);
+*/
+
+	if (mod_data.product_name != NULL) {
+		// set product name provided
+		strncpy(fsg_string_product, mod_data.product_name, sizeof fsg_string_product);
+	}
 
 	fsg->thread_task = kthread_create(fsg_main_thread, fsg,
 			"file-storage-gadget");
@@ -3520,6 +3532,9 @@ static int __init fsg_bind(struct usb_gadget *gadget)
 
 	/* Tell the thread to start working */
 	wake_up_process(fsg->thread_task);
+
+	usb_gadget_connect(gadget);
+
 	return 0;
 
 autoconf_fail:

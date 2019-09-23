@@ -2656,9 +2656,11 @@ static struct module *layout_and_allocate(struct load_info *info)
 	if (IS_ERR(mod))
 		return mod;
 
+#if 0
 	err = check_modinfo(mod, info);
 	if (err)
 		return ERR_PTR(err);
+#endif
 
 	/* Allow arches to frob section contents and sizes.  */
 	err = module_frob_arch_sections(info->hdr, info->sechdrs,

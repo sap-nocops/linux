@@ -91,10 +91,11 @@ scm_version()
 			id=`hg log -r . --template '{latesttag}'`
 			printf '%s%s' -hg "$id"
 		else
+			branch=`hg log -r . --template '{branches}'`
 			tag=`printf '%s' "$hgid" | cut -d' ' -f2`
 			if [ -z "$tag" -o "$tag" = tip ]; then
 				id=`printf '%s' "$hgid" | sed 's/[+ ].*//'`
-				printf '%s%s' -hg "$id"
+				printf '%s+%s-%s' -hg "${branch:="default"}" "$id"
 			fi
 		fi
 

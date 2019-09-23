@@ -6,6 +6,9 @@
 
 wm97xx-ts-y := wm97xx-core.o
 
+obj-$(CONFIG_TOUCHSCREEN_ELAN)		+= elan_ts.o
+obj-$(CONFIG_TOUCHSCREEN_ELAN)		+= elan_touch.o
+obj-$(CONFIG_TOUCHSCREEN_BN0605001)	+= ips_ts_bn0605001.o
 obj-$(CONFIG_TOUCHSCREEN_88PM860X)	+= 88pm860x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_AD7877)	+= ad7877.o
 obj-$(CONFIG_TOUCHSCREEN_AD7879)	+= ad7879.o
@@ -43,6 +46,7 @@ obj-$(CONFIG_TOUCHSCREEN_S3C2410)	+= s3c2410_ts.o
 obj-$(CONFIG_TOUCHSCREEN_ST1232)	+= st1232.o
 obj-$(CONFIG_TOUCHSCREEN_STMPE)		+= stmpe-ts.o
 obj-$(CONFIG_TOUCHSCREEN_TNETV107X)	+= tnetv107x-ts.o
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI)	+= synaptics_i2c_rmi.o
 obj-$(CONFIG_TOUCHSCREEN_TOUCHIT213)	+= touchit213.o
 obj-$(CONFIG_TOUCHSCREEN_TOUCHRIGHT)	+= touchright.o
 obj-$(CONFIG_TOUCHSCREEN_TOUCHWIN)	+= touchwin.o
@@ -60,3 +64,16 @@ obj-$(CONFIG_TOUCHSCREEN_WM97XX_MAINSTONE)	+= mainstone-wm97xx.o
 obj-$(CONFIG_TOUCHSCREEN_WM97XX_ZYLONITE)	+= zylonite-wm97xx.o
 obj-$(CONFIG_TOUCHSCREEN_W90X900)	+= w90p910_ts.o
 obj-$(CONFIG_TOUCHSCREEN_TPS6507X)	+= tps6507x-ts.o
+obj-$(CONFIG_TOUCHSCREEN_FT5X_TS)	+= ft5x02_config.o ini.o ft5x_ts.o
+obj-$(CONFIG_TOUCHSCREEN_FT5X_TS_PB)	+= ft5x02_config.o ini.o ft5x_ts_pb.o  
+obj-$(CONFIG_TOUCHSCREEN_CNTOUCH_PB)	+= cnt_ts_pb.o
+obj-$(CONFIG_TOUCHSCREEN_GT801)		+= goodix_touch.o
+obj-$(CONFIG_TOUCHSCREEN_GT818)		+= gt818_ts.o
+obj-$(CONFIG_TOUCHSCREEN_GT82X)		+= gt82x.o
+obj-$(CONFIG_TOUCHSCREEN_ZT8031)	+= zt8031.o
+obj-$(CONFIG_TOUCHSCREEN_COASIA)	+= coasia_i2c.o
+obj-$(CONFIG_TOUCHSCREEN_SUN4I_TS)	+= sun4i-ts.o
+obj-$(CONFIG_TOUCHSCREEN_SW_TS)		+= sw-ts.o
+obj-$(CONFIG_TOUCHSCREEN_CYPRESS)	+= cypress.o
+obj-$(CONFIG_TOUCHSCREEN_CYPRESS_XRZ)	+= ft5x_xc3.o
+obj-$(CONFIG_TOUCHSCREEN_ETPWACOM)   += wacom_i2c.o

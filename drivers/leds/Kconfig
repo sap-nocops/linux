@@ -24,6 +24,25 @@ config LEDS_CLASS
 
 comment "LED drivers"
 
+config LEDS_SUNXI
+	tristate "LED Support for sunxi platform"
+	depends on LEDS_CLASS
+	depends on (ARCH_SUN3I || ARCH_SUN4I || ARCH_SUN5I)
+	help
+	  This option enables support for LEDs connected to gpio
+	  lines on the Allwinner SOCs (sun3i/sun4i/arch_sun5i).
+	  The leds must be defined in [leds_para] section of sysconfig.fex
+	  file (leds_used/leds_num/leds_pin_x/leds_name_x variables)
+
+config LEDS_SUNXI_PB624
+	bool "PB624 LED Support on sunxi platform"
+	depends on LEDS_CLASS
+	depends on (ARCH_SUN3I || ARCH_SUN4I || ARCH_SUN5I)
+	depends on LEDS_SUNXI
+	help
+		This options enables support LED on SUNXI platform using 
+		PB624 sysconfig.fex
+
 config LEDS_88PM860X
 	tristate "LED Support for Marvell 88PM860x PMIC"
 	depends on LEDS_CLASS
@@ -105,7 +124,7 @@ config LEDS_FSG
 	depends on MACH_FSG
 	help
 	  This option enables support for the LEDs on the Freecom FSG-3.
-
+	  
 config LEDS_WRAP
 	tristate "LED Support for the WRAP series LEDs"
 	depends on LEDS_CLASS
@@ -398,7 +417,7 @@ config LEDS_ASIC3
 	  ASIC3 LED GPIOs are inputs, not outputs, thus the leds-gpio driver
 	  cannot be used. This driver supports hardware blinking with an on+off
 	  period from 62ms to 125s. Say Y to enable LEDs on the HP iPAQ hx4700.
-
+	  
 config LEDS_TRIGGERS
 	bool "LED Trigger support"
 	depends on LEDS_CLASS
@@ -465,6 +484,24 @@ config LEDS_TRIGGER_DEFAULT_ON
 	help
 	  This allows LEDs to be initialised in the ON state.
 	  If unsure, say Y.
+
+config LEDS_TRIGGER_SLEEP
+	tristate "LED Sleep Mode Trigger"
+	depends on LEDS_TRIGGERS && HAS_EARLYSUSPEND
+	help
+	  This turns LEDs on when the screen is off but the cpu still running.
+	  
+config LEDS_TRIGGER_CHARGING
+	tristate "LED Charging Trigger"
+	depends on LEDS_TRIGGERS && AW_AXP20
+	help
+	  This turns LEDs on when charging is started and off when battery has charged.	 
+
+config  LEDS_TRIGGER_CHARGING_USE_TIMER
+	bool "fix led off if charging has done, but battery's capacity hasn't 100%"
+	depends on LEDS_TRIGGER_CHARGING
+	help
+		Fix led off if charging has done, but battery's capacity hasn't 100%
 
 comment "iptables trigger is under Netfilter config (LED target)"
 	depends on LEDS_TRIGGERS

@@ -46,7 +46,8 @@ struct fat_mount_options {
 		 usefree:1,	  /* Use free_clusters for FAT32 */
 		 tz_utc:1,	  /* Filesystem timestamps are in UTC */
 		 rodir:1,	  /* allow ATTR_RO for directory */
-		 discard:1;	  /* Issue discard requests on deletions */
+		 discard:1,	  /* Issue discard requests on deletions */
+		 symlinks:1;	  /* Do we want to support symlinks? */
 };
 
 #define FAT_HASH_BITS	8
@@ -78,6 +79,7 @@ struct msdos_sb_info {
 	const void *dir_ops;		     /* Opaque; default directory operations */
 	int dir_per_block;	     /* dir entries per block */
 	int dir_per_block_bits;	     /* log2(dir_per_block) */
+	unsigned long vol_id;        /* volume ID */
 
 	int fatent_shift;
 	struct fatent_operations *fatent_ops;
@@ -305,6 +307,7 @@ extern long fat_generic_ioctl(struct file *filp, unsigned int cmd,
 			      unsigned long arg);
 extern const struct file_operations fat_file_operations;
 extern const struct inode_operations fat_file_inode_operations;
+extern const struct inode_operations fat_symlink_inode_operations;
 extern int fat_setattr(struct dentry * dentry, struct iattr * attr);
 extern void fat_truncate_blocks(struct inode *inode, loff_t offset);
 extern int fat_getattr(struct vfsmount *mnt, struct dentry *dentry,
