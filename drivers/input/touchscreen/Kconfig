@@ -11,6 +11,24 @@ menuconfig INPUT_TOUCHSCREEN
 
 if INPUT_TOUCHSCREEN
 
+config TOUCHSCREEN_ELANTS
+	tristate "Marvell Elan old touchscreen"
+	depends on I2C
+	help
+	  BNElan touchscreen driver
+
+config TOUCHSCREEN_ELAN
+	tristate "Marvell Elan touchscreen"
+	depends on I2C
+	help
+	  BNElan touchscreen driver
+
+config TOUCHSCREEN_BN0605001
+	tristate "Marvell BN0605001 touchscreen"
+	depends on I2C
+	help
+	  BN0605001 touchscreen driver
+
 config TOUCHSCREEN_88PM860X
 	tristate "Marvell 88PM860x touchscreen"
 	depends on MFD_88PM860X
@@ -383,6 +401,12 @@ config TOUCHSCREEN_TNETV107X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tnetv107x-ts.
 
+config TOUCHSCREEN_SYNAPTICS_I2C_RMI
+	tristate "Synaptics i2c touchscreen"
+	depends on I2C
+	help
+	  This enables support for Synaptics RMI over I2C based touchscreens.
+
 config TOUCHSCREEN_TOUCHRIGHT
 	tristate "Touchright serial touchscreen"
 	select SERIO
@@ -726,4 +750,65 @@ config TOUCHSCREEN_TPS6507X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
 
+config  TOUCHSCREEN_GT801
+       tristate  "dpt microelctronics gt801 touchscreen driver"
+       depends on I2C
+       help
+          GT801 touchscreen driver
+
+config  TOUCHSCREEN_CTPTS
+        tristate  "dpt microelctronics IPS_TS  touchscreen driver"
+        depends on I2C
+        help
+        CYPRESS_TS  touchscreen driver
+
+config  TOUCHSCREEN_GT818
+       tristate  "dpt microelctronics gt818 touchscreen driver"
+       depends on I2C
+       help
+          GT801 touchscreen driver
+
+config  TOUCHSCREEN_GT82X
+       tristate  "dpt microelctronics gt82X touchscreen driver"
+       depends on I2C
+       help
+          GT82X touchscreen driver
+
+config  TOUCHSCREEN_GT9XX
+       tristate  "gt9xx touchscreen driver"      
+       depends on INPUT && I2C
+       default m
+       help
+         gt9xx touchscreen driver    
+         
+config  TOUCHSCREEN_SUN4I_TS
+       tristate  "sun4i-ts touchscreen driver"
+       help
+           sun4i-ts touchscreen driver
+
+config  TOUCHSCREEN_SW_TS
+       tristate  "softwinnner (sw-ts) touchscreen driver"
+       help
+           sw-ts touchscreen driver
+
+config TOUCHSCREEN_FT5X_TS
+       tristate  "ft5x touchscreen driver"
+       help
+         byd0x7ets touchscreen driver
+
+config TOUCHSCREEN_CYPRESS_XRZ
+       tristate  "Cypress CTM340 driver implemented by XRZ"
+       depends on I2C
+       help
+         Cypress CTM340 driver implemented by XRZ
+
+config  TOUCHSCREEN_ZT8031
+       tristate  "ZT8031 touchscreen driver"
+       help
+          ZT8031 touchscreen driver
+
+config  TOUCHSCREEN_COASIA
+       tristate  "COASIA touchscreen driver"
+       help
+          COASIA touchscreen driver
 endif

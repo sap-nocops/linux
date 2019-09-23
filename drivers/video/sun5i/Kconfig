@@ -1,0 +1,47 @@
+#Eink configuration for Sunxi
+
+config FB_SUNXI
+	bool "SUNXi Eink screen"
+	default y
+	help
+          Enable eink screen for Allwinner architecture.
+
+choice
+	depends on (FB_SUNXI)
+	prompt "Screen resolution"
+	default FB_SUNXI_1024_758
+	help
+	  Selected desired screen resolution
+
+config FB_SUNXI_800_600
+	bool "800 x 600"
+
+config FB_SUNXI_1024_758
+	bool "1024 x 758"
+
+config FB_SUNXI_1024_768
+	bool "1024 x 768"
+
+config FB_SUNXI_1448_1072
+	bool "1448 x 1072"
+	
+endchoice
+
+
+choice
+	prompt "Screen connection type"
+	depends on (FB_SUNXI)
+	default FB_SUNXI_CONN_SCRAMBLED
+
+config FB_SUNXI_CONN_LINEAR
+	help
+	  Selected the connection layout
+	bool "Linear version (used on M1)"
+
+config FB_SUNXI_CONN_SCRAMBLED
+	help
+	  Selected the connection layout
+	bool "Scrambled version (used on F1F2)"
+
+endchoice
+

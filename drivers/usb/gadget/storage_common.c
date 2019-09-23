@@ -603,7 +603,10 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	curlun->filp = filp;
 	curlun->file_length = size;
 	curlun->num_sectors = num_sectors;
+
 	LDBG(curlun, "open backing file: %s\n", filename);
+	printk("usb open backing file: %s, 0x%p\n", filename, curlun);
+
 	rc = 0;
 
 out:
@@ -616,6 +619,9 @@ static void fsg_lun_close(struct fsg_lun *curlun)
 {
 	if (curlun->filp) {
 		LDBG(curlun, "close backing file\n");
+
+        printk("usb close backing file: 0x%p\n", curlun);
+
 		fput(curlun->filp);
 		curlun->filp = NULL;
 	}
@@ -763,10 +769,17 @@ static ssize_t fsg_store_file(struct device *dev, struct device_attribute *attr,
 	struct rw_semaphore	*filesem = dev_get_drvdata(dev);
 	int		rc = 0;
 
+
+#ifndef CONFIG_USB_ANDROID_MASS_STORAGE
+	/* disabled in android because we need to allow closing the backing file
+	 * if the media was removed
+	 */
 	if (curlun->prevent_medium_removal && fsg_lun_is_open(curlun)) {
 		LDBG(curlun, "eject attempt prevented\n");
+		printk("media is prevented, can not eject\n");
 		return -EBUSY;				/* "Door is locked" */
 	}
+#endif
 
 	/* Remove a trailing newline */
 	if (count > 0 && buf[count-1] == '\n')

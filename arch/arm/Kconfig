@@ -37,6 +37,12 @@ config ARM
 	  Europe.  There is an ARM Linux project with a web page at
 	  <http://www.arm.linux.org.uk/>.
 
+config CHIP_ID
+        int
+        default 1120 if ARCH_SUN3I
+        default 1123 if ARCH_SUN4I
+	default 1125 if ARCH_SUN5I
+
 config HAVE_PWM
 	bool
 
@@ -596,6 +602,41 @@ config ARCH_TEGRA
 	help
 	  This enables support for NVIDIA Tegra based systems (Tegra APX,
 	  Tegra 6xx and Tegra 2 series).
+
+config ARCH_SUN4I
+	bool "ReuuiMlla SUN4I Platform"
+	select CPU_V7
+	select ARM_AMBA
+	select HAVE_CLK
+	select CLKDEV_LOOKUP
+	select CLKSRC_MMIO
+	select GENERIC_CLOCKEVENTS
+	select ARCH_HAS_CPUFREQ
+	select ARM_L1_CACHE_SHIFT_6
+	help
+	  This enables support for Reuuimlla Technology Co., Ltd A10 SoC based systems
+
+config ARCH_SUN5I
+        bool "ReuuiMlla SUN5I Platform"
+        select CPU_V7
+        select ARM_AMBA
+        select HAVE_CLK
+        select CLKDEV_LOOKUP
+        select CLKSRC_MMIO
+        select GENERIC_CLOCKEVENTS
+        select ARCH_HAS_CPUFREQ
+        select ARM_L1_CACHE_SHIFT_6
+        select HAVE_SCHED_CLOCK
+        select HAVE_UNSTABLE_SCHED_CLOCK
+        help
+          This enables support for Reuuimlla Technology Co., Ltd A12/A13 SoC based systems
+
+#if ARCH_SUN4I
+#source "arch/arm/mach-sun4i/Kconfig"
+#endif
+if ARCH_SUN5I
+source "arch/arm/mach-sun5i/Kconfig"
+endif
 
 config ARCH_PNX4008
 	bool "Philips Nexperia PNX4008 Mobile"
@@ -1684,6 +1725,15 @@ config DEPRECATED_PARAM_STRUCT
 	help
 	  This was deprecated in 2001 and announced to live on for 5 years.
 	  Some old boot loaders still use this way.
+
+config ARM_FLUSH_CONSOLE_ON_RESTART
+	bool "Force flush the console on restart"
+	help
+	  If the console is locked while the system is rebooted, the messages
+	  in the temporary logbuffer would not have propogated to all the
+	  console drivers. This option forces the console lock to be
+	  released if it failed to be acquired, which will cause all the
+	  pending messages to be flushed.
 
 endmenu
 
