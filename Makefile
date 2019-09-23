@@ -1006,7 +1006,9 @@ endef
 define filechk_version.h
 	(echo \#define LINUX_VERSION_CODE $(shell                             \
 	expr $(VERSION) \* 65536 + 0$(PATCHLEVEL) \* 256 + 0$(SUBLEVEL));    \
-	echo '#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))';)
+	echo '#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))'; \
+	echo \#define SECO_VERSION \"$(shell $(srctree)/scripts/setsecoversion $(srctree))\"; \
+	echo '#define PRINT_VERSION printk (KERN_INFO "Kernel ver: %s\\n", SECO_VERSION)')
 endef
 
 include/linux/version.h: $(srctree)/Makefile FORCE

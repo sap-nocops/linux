@@ -46,3 +46,5 @@ obj-y				+= ti-st/
 obj-$(CONFIG_AB8500_PWM)	+= ab8500-pwm.o
 obj-y				+= lis3lv02d/
 obj-y				+= carma/
+obj-$(CONFIG_MXS_PERFMON)	+= mxs-perfmon.o
+obj-$(CONFIG_UDOO_ARD)		+= udoo_ard.o

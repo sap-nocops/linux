@@ -490,6 +490,19 @@ config PCH_PHUB
 	  To compile this driver as a module, choose M here: the module will
 	  be called pch_phub.
 
+config MXS_PERFMON
+	tristate "i.MX Performance Monitor"
+	depends on ARCH_MX50 || ARCH_MX6
+	default y
+
+config UDOO_ARD
+	tristate "UDOO-Arduino erase/reset Driver"
+	depends on MACH_MX6Q_SECO_UDOO || ARCH_MX6
+	default n
+	help
+	  This driver is used to erase and reset arduino board via command sent
+	  over USB-to-SERIAL connection.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

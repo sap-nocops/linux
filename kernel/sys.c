@@ -356,6 +356,8 @@ static void kernel_shutdown_prepare(enum system_states state)
  *
  *	Shutdown everything and perform a clean system halt.
  */
+
+
 void kernel_halt(void)
 {
 	kernel_shutdown_prepare(SYSTEM_HALT);
@@ -386,6 +388,10 @@ void kernel_power_off(void)
 EXPORT_SYMBOL_GPL(kernel_power_off);
 
 static DEFINE_MUTEX(reboot_mutex);
+
+#if defined(CONFIG_MACH_MX6_SECO_Q7) || defined(CONFIG_MACH_MX6_SECO_uQ7)  || defined(CONFIG_MACH_MX6_SECO_UDOO) || defined(CONFIG_MSP430)
+#include <linux/i2c/msp430.h>
+#endif
 
 /*
  * Reboot system call: for obvious reasons only root may call it,
@@ -418,6 +424,10 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	 */
 	if ((cmd == LINUX_REBOOT_CMD_POWER_OFF) && !pm_power_off)
 		cmd = LINUX_REBOOT_CMD_HALT;
+
+#if defined(CONFIG_MACH_MX6_SECO_Q7) || defined(CONFIG_MACH_MX6_SECO_uQ7) || defined(CONFIG_MACH_MX6_SECO_UDOO) || defined(CONFIG_MSP430)
+	SetPowerState (cmd, 1);
+#endif
 
 	mutex_lock(&reboot_mutex);
 	switch (cmd) {

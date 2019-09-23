@@ -42,6 +42,7 @@
 extern int register_reboot_notifier(struct notifier_block *);
 extern int unregister_reboot_notifier(struct notifier_block *);
 
+extern void SetPowerState (int state, int validate);
 
 /*
  * Architecture-specific implementations of sys_reboot commands.
