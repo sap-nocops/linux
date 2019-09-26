@@ -171,7 +171,53 @@
 		reset-duration-ms = <5>;
 		char-device-name = "pwr-modem";
 	};
+
+        speaker_pa: analog-amplifier {
+		compatible = "simple-audio-amplifier";
+		enable-gpios = <&pio 6 13 GPIO_ACTIVE_HIGH>; /* PG13 */
+        };
+
+	//XXX: the board has two microphones and two outputs
+	// and no detection of plugin/out?
+	//
+	// MIC1 is internal electret microphone, uses MBIAS
+	// MIC2 is on the jack, uses HBIAS
+	// HPL/R is headphone output (stereo)
+	// SPOL to is differential amplifier input (mono)
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "x-powers-ac100";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <512>; // multiplier, gives ~11MHz for 44kHz
+		simple-audio-card,bitclock-master = <&dailink0_master>;
+		simple-audio-card,frame-master = <&dailink0_master>;
+		//simple-audio-card,widgets = // renaming of widgets
+			//"Microphone", "Microphone Jack",
+			//"Headphone", "Headphone Jack",
+			//"Speaker", "External Speaker";
+		// for starters we can wire power amp to SPOL
+		//simple-audio-card,routing =
+			//"External Speaker", "SPOL";
+
+		// what name will this have?
+		simple-audio-card,aux-devs = <&speaker_pa>;
+
+		simple-audio-card,codec {
+			sound-dai = <&ac100_codec>;
+			//clocks = <&ac100_codec 0>;
+		};
+
+		dailink0_master: simple-audio-card,cpu {
+			sound-dai = <&dai>;
+		};
+	};
 };
+
+//&i2s0 {
+//	status = "okay";
+//	pinctrl-names = "default";
+//	pinctrl-0 = <&i2s0_pins>;
+//};
 
 &ccu {
 	/* Use a stable clock source with known fixed rate for MCLK */
@@ -375,9 +421,17 @@
 		reg = <0xe89>;
 
 		ac100_codec: codec {
+			#sound-dai-cells = <0>;
 			compatible = "x-powers,ac100-codec";
 			interrupt-parent = <&r_pio>;
 			interrupts = <0 12 IRQ_TYPE_LEVEL_LOW>; /* PL12 */
+
+			LDOIN-supply = <&reg_aldo2>;
+			AVCC-supply = <&reg_aldo3>;
+			CPVDD-supply = <&reg_aldo2>;
+			VDD_IO1-supply = <&reg_dcdc1>;
+			VDD_IO2-supply = <&reg_dldo1>;
+
 			#clock-cells = <0>;
 			clock-output-names = "4M_adda";
 		};

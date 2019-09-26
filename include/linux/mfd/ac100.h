@@ -43,9 +43,7 @@ struct ac100_dev {
 #define AC100_I2S2_SND_IN_CTRL		0x22
 #define AC100_I2S2_MXR_SRC		0x23
 #define AC100_I2S2_VOL_CTRL1		0x24
-#define AC100_I2S2_VOL_CTRL2		0x25
-#define AC100_I2S2_VOL_CTRL3		0x26
-#define AC100_I2S2_VOL_CTRL4		0x27
+#define AC100_I2S2_VOL_CTRL2		0x26
 #define AC100_I2S2_MXR_GAIN		0x28
 
 /* I2S3 interface */
