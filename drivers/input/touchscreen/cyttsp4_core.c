@@ -114,8 +114,8 @@ const char *cy_driver_core_name = CYTTSP4_CORE_NAME;
 const char *cy_driver_core_version = CY_DRIVER_VERSION;
 const char *cy_driver_core_date = CY_DRIVER_DATE;
 
-LIST_HEAD(cyttsp4_async_init_list);
-EXPORT_SYMBOL_GPL(cyttsp4_async_init_list);
+ASYNC_DOMAIN_EXCLUSIVE(cyttsp4_async_domain);
+EXPORT_SYMBOL_GPL(cyttsp4_async_domain);
 
 enum cyttsp4_sleep_state {
 	SS_SLEEP_OFF,
@@ -1174,9 +1174,9 @@ static void cyttsp4_stop_wd_timer(struct cyttsp4_core_data *cd)
 	del_timer_sync(&cd->watchdog_timer);
 }
 
-static void cyttsp4_watchdog_timer(unsigned long handle)
+static void cyttsp4_watchdog_timer(struct timer_list *t)
 {
-	struct cyttsp4_core_data *cd = (struct cyttsp4_core_data *)handle;
+	struct cyttsp4_core_data *cd = from_timer(cd, t, watchdog_timer);
 
 	dev_vdbg(cd->dev, "%s: Timer triggered\n", __func__);
 
@@ -3397,13 +3397,13 @@ static void cyttsp4_free_si_ptrs(struct cyttsp4_core_data *cd)
 	kfree(si->btn_rec_data);
 }
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 static int cyttsp4_core_rt_suspend(struct device *dev)
 {
 	struct cyttsp4_core_data *cd = dev_get_drvdata(dev);
 	int rc;
 
-    dev_dbg(dev, "%s\n", __func__);
+	dev_dbg(dev, "%s\n", __func__);
 	if(cd->power_state == CY_POWER_OFF){
 		dev_dbg(dev, "%s CY_POWER_OFF\n", __func__);
 
@@ -3470,46 +3470,6 @@ static int cyttsp4_core_rt_resume(struct device *dev)
 
 	return 0;
 }
-
-/**
- * Force a device into suspend state if needed.
- *
- * Disable runtime PM so we safely can check the device's runtime PM status and
- * if it is active, invoke it's .runtime_suspend callback to bring it into
- * suspend state. Keep runtime PM disabled to preserve the state unless we
- * encounter errors.
- *
- * Typically this function may be invoked from a system suspend callback to make
- * sure the device is put into low power state.
- *
- * TODO: replace this with pm_runtime_force_suspend -function found in
- * new kernel versions
- */
-static int cyttsp4_core_pm_runtime_force_suspend(struct device *dev)
-{
-	int ret = 0;
-
-	pm_runtime_disable(dev);
-
-	/*
-	 * Note that pm_runtime_status_suspended() returns false while
-	 * !CONFIG_PM_RUNTIME, which means the device will be put into low
-	 * power state.
-	 */
-	if (pm_runtime_status_suspended(dev))
-		return 0;
-
-	ret = cyttsp4_core_rt_suspend(dev);
-
-	if (ret)
-		goto err;
-
-	pm_runtime_set_suspended(dev);
-	return 0;
-err:
-	pm_runtime_enable(dev);
-	return ret;
-}
 #endif
 
 #if defined(CONFIG_PM_SLEEP)
@@ -3517,8 +3477,8 @@ static int cyttsp4_core_suspend(struct device *dev)
 {
 	struct cyttsp4_core_data *cd = dev_get_drvdata(dev);
 
-#if defined(CONFIG_PM_RUNTIME)
-	cyttsp4_core_pm_runtime_force_suspend(dev);
+#if defined(CONFIG_PM)
+	pm_runtime_force_suspend(dev);
 #endif
 
 	if (!(cd->pdata->flags & CY_CORE_FLAG_WAKE_ON_GESTURE))
@@ -4053,8 +4013,7 @@ static int cyttsp4_core_probe(struct cyttsp4_core *core)
 	}
 
 	/* Setup watchdog timer */
-	setup_timer(&cd->watchdog_timer, cyttsp4_watchdog_timer,
-		(unsigned long)cd);
+	timer_setup(&cd->watchdog_timer, cyttsp4_watchdog_timer, 0);
 
 	pm_runtime_enable(dev);
 

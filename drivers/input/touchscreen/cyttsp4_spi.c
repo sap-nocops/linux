@@ -339,7 +339,7 @@ static struct of_device_id cyttsp4_spi_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cyttsp4_spi_of_match);
 
-static int __devinit cyttsp4_spi_probe(struct spi_device *spi)
+static int cyttsp4_spi_probe(struct spi_device *spi)
 {
 	struct cyttsp4_spi *ts_spi;
 	int rc = 0;
@@ -408,7 +408,7 @@ error_alloc_data_failed:
 	return rc;
 }
 
-static int __devexit cyttsp4_spi_remove(struct spi_device *spi)
+static int cyttsp4_spi_remove(struct spi_device *spi)
 {
 	struct device *dev = &spi->dev;
 	struct cyttsp4_spi *ts_spi = dev_get_drvdata(dev);
@@ -434,7 +434,7 @@ static struct spi_driver cyttsp4_spi_driver = {
 		.of_match_table = cyttsp4_spi_of_match,
 	},
 	.probe = cyttsp4_spi_probe,
-	.remove = __devexit_p(cyttsp4_spi_remove),
+	.remove = cyttsp4_spi_remove,
 	.id_table = cyttsp4_spi_id,
 };
 

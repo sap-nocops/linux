@@ -61,7 +61,7 @@ static struct device_type cyttsp4_core_type = {
 	.release = cyttsp4_dev_release
 };
 
-static int cyttsp4_match_dev(struct device *dev, void *data)
+static int cyttsp4_match_dev(struct device *dev, const void *data)
 {
 	return dev == (struct device *)data;
 }
@@ -562,11 +562,13 @@ exit:
 	len = snprintf(buf, PAGE_SIZE, "ttsp4:%s\n", name);
 	return (len >= PAGE_SIZE) ? (PAGE_SIZE - 1) : len;
 }
+static DEVICE_ATTR_RO(modalias);
 
-static struct device_attribute cyttsp4_dev_attrs[] = {
-	__ATTR_RO(modalias),
-	__ATTR_NULL,
+static struct attribute *cyttsp4_dev_attrs[] = {
+	&dev_attr_modalias.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(cyttsp4_dev);
 
 #ifdef CONFIG_SUSPEND
 static int cyttsp4_pm_suspend(struct device *dev)
@@ -593,27 +595,24 @@ static int cyttsp4_pm_resume(struct device *dev)
 #define cyttsp4_pm_resume		NULL
 #endif /* !CONFIG_SUSPEND */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 #define cyttsp4_pm_rt_suspend		pm_generic_runtime_suspend
 #define cyytsp4_pm_rt_resume		pm_generic_runtime_resume
-#define cyytsp4_pm_rt_idle		pm_generic_runtime_idle
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 #define cyttsp4_pm_rt_suspend		NULL
 #define cyytsp4_pm_rt_resume		NULL
-#define cyytsp4_pm_rt_idle		NULL
-#endif /* !CONFIG_PM_RUNTIME */
+#endif /* !CONFIG_PM */
 
 static const struct dev_pm_ops cyttsp4_dev_pm_ops = {
 	.suspend = cyttsp4_pm_suspend,
 	.resume = cyttsp4_pm_resume,
 	.runtime_suspend = cyttsp4_pm_rt_suspend,
 	.runtime_resume = cyytsp4_pm_rt_resume,
-	.runtime_idle = cyytsp4_pm_rt_idle,
 };
 
 struct bus_type cyttsp4_bus_type = {
 	.name		= "ttsp4",
-	.dev_attrs	= cyttsp4_dev_attrs,
+	.dev_groups     = cyttsp4_dev_groups,
 	.match		= cyttsp4_device_match,
 	.uevent		= NULL,
 	.pm		= &cyttsp4_dev_pm_ops,

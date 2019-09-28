@@ -2633,7 +2633,7 @@ exit:
 	return size;
 }
 
-static DEVICE_ATTR(bist_raw_data, S_IRUSR | S_IWUSR,
+static DEVICE_ATTR(bist_raw_data, S_IRUSR,
 	cyttsp4_bist_raw_data_show, NULL);
 
 static ssize_t cyttsp4_auto_short_check(struct device *dev,
@@ -2759,7 +2759,7 @@ exit:
     return size;
 }
 
-static DEVICE_ATTR(bist_auto_short, S_IRUSR | S_IWUSR,
+static DEVICE_ATTR(bist_auto_short, S_IRUSR,
 	cyttsp4_bist_auto_short_show, NULL);
 
 static int cyttsp4_idac_check(struct cyttsp4_device_access_data* dad, int type, int value)
@@ -3047,8 +3047,8 @@ exit:
 	return print_idx;
 }
 
-static DEVICE_ATTR(bist_idac, 0664,
-				   cyttsp4_bist_idac_show, NULL);
+static DEVICE_ATTR(bist_idac, S_IRUSR,
+		   cyttsp4_bist_idac_show, NULL);
 
 static ssize_t cyttsp4_idac_print(struct device *dev, char *buf, int print_idx, enum cyttsp4_idac_type type)
 {
@@ -3613,7 +3613,7 @@ exit:
 	return size;
 }
 
-static DEVICE_ATTR(raw_data, S_IRUSR | S_IWUSR,
+static DEVICE_ATTR(raw_data, S_IRUSR,
 	cyttsp4_raw_data_show, NULL);
 
 /*
@@ -3670,7 +3670,7 @@ static ssize_t cyttsp4_hw_info_show(struct device *dev,
 	return i;
 }
 
-static DEVICE_ATTR(hw_info, S_IRUSR | S_IWUSR,
+static DEVICE_ATTR(hw_info, S_IRUSR,
 	cyttsp4_hw_info_show, NULL);
 
 static ssize_t cyttsp4_bist_limit_show(struct device *dev,
@@ -4452,14 +4452,14 @@ fail_unregister_devices:
 static void cyttsp4_device_access_init_async(void *unused,
 					async_cookie_t cookie)
 {
-	async_synchronize_cookie_domain(cookie, &cyttsp4_async_init_list);
+	async_synchronize_cookie_domain(cookie, &cyttsp4_async_domain);
 	cyttsp4_device_access_init();
 }
 
 static int __init cyttsp4_device_access_init_schedule(void)
 {
 	async_schedule_domain(cyttsp4_device_access_init_async, NULL,
-			&cyttsp4_async_init_list);
+			&cyttsp4_async_domain);
 	return 0;
 }
 module_init(cyttsp4_device_access_init_schedule);

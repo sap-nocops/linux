@@ -75,7 +75,7 @@ static int cyttsp4_btn_enable(struct device *dev);
 static int cyttsp4_btn_disable(struct device *dev);
 #endif
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 static int cyttsp4_btn_suspend(struct device *dev);
 static int cyttsp4_btn_resume(struct device *dev);
 #endif
@@ -295,7 +295,7 @@ static void cyttsp4_btn_early_suspend(struct early_suspend *h)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&bd->report_lock);
 	bd->is_suspended = true;
 	cyttsp4_btn_lift_all(bd);
@@ -313,7 +313,7 @@ static void cyttsp4_btn_late_resume(struct early_suspend *h)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&bd->report_lock);
 	bd->is_suspended = false;
 	mutex_unlock(&bd->report_lock);
@@ -369,7 +369,7 @@ static void cyttsp4_btn_setup_early_suspend(struct cyttsp4_mt_data *md)
 }
 #endif
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 static int cyttsp4_btn_rt_suspend(struct device *dev)
 {
 	struct cyttsp4_btn_data *bd = dev_get_drvdata(dev);
@@ -417,7 +417,7 @@ static int cyttsp4_btn_pm_runtime_force_suspend(struct device *dev)
 
 	/*
 	 * Note that pm_runtime_status_suspended() returns false while
-	 * !CONFIG_PM_RUNTIME, which means the device will be put into low
+	 * !CONFIG_PM, which means the device will be put into low
 	 * power state.
 	 */
 	if (pm_runtime_status_suspended(dev))
@@ -441,7 +441,7 @@ static int cyttsp4_btn_suspend(struct device *dev)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 	cyttsp4_btn_pm_runtime_force_suspend(dev);
 #endif
 

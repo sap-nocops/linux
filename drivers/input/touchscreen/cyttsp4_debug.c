@@ -591,14 +591,14 @@ fail_unregister_devices:
 static void __init cyttsp4_debug_init_async(void *unused,
 					async_cookie_t cookie)
 {
-	async_synchronize_cookie_domain(cookie, &cyttsp4_async_init_list);
+	async_synchronize_cookie_domain(cookie, &cyttsp4_async_domain);
 	cyttsp4_debug_init();
 }
 
 static int __init cyttsp4_debug_init_schedule(void)
 {
 	async_schedule_domain(cyttsp4_debug_init_async, NULL,
-			&cyttsp4_async_init_list);
+			&cyttsp4_async_domain);
 	return 0;
 }
 module_init(cyttsp4_debug_init_schedule);

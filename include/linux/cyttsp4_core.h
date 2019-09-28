@@ -34,6 +34,7 @@
 #define _LINUX_CYTTSP4_CORE_H
 
 #include <linux/stringify.h>
+#include <linux/async.h>
 
 #define CYTTSP4_CORE_NAME "cyttsp4_core"
 
@@ -145,6 +146,6 @@ extern void cyttsp4_pr_buf(struct device *dev, u8 *pr_buf, u8 *dptr, int size,
 #define cyttsp4_pr_buf(a, b, c, d, e) do { } while (0)
 #endif
 
-extern struct list_head cyttsp4_async_init_list;
+extern struct async_domain cyttsp4_async_domain;
 
 #endif /* _LINUX_CYTTSP4_CORE_H */

@@ -174,7 +174,7 @@ static struct of_device_id cyttsp4_i2c_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cyttsp4_i2c_of_match);
 
-static int __devinit cyttsp4_i2c_probe(struct i2c_client *client,
+static int cyttsp4_i2c_probe(struct i2c_client *client,
 	const struct i2c_device_id *i2c_id)
 {
 	struct cyttsp4_i2c *ts_i2c;
@@ -248,7 +248,7 @@ error_alloc_data_failed:
 }
 
 /* registered in driver struct */
-static int __devexit cyttsp4_i2c_remove(struct i2c_client *client)
+static int cyttsp4_i2c_remove(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct cyttsp4_i2c *ts_i2c = dev_get_drvdata(dev);
@@ -274,14 +274,14 @@ static struct i2c_driver cyttsp4_i2c_driver = {
 		.of_match_table = cyttsp4_i2c_of_match,
 	},
 	.probe = cyttsp4_i2c_probe,
-	.remove = __devexit_p(cyttsp4_i2c_remove),
+	.remove = cyttsp4_i2c_remove,
 	.id_table = cyttsp4_i2c_id,
 };
 
 static void cyttsp4_i2c_init_async(void *unused, async_cookie_t cookie)
 {
 	int rc;
-	async_synchronize_cookie_domain(cookie, &cyttsp4_async_init_list);
+	async_synchronize_cookie_domain(cookie, &cyttsp4_async_domain);
 	rc = i2c_add_driver(&cyttsp4_i2c_driver);
 
 	pr_info("%s: Cypress TTSP I2C Touchscreen Driver (Built %s) rc=%d\n",
@@ -291,7 +291,7 @@ static void cyttsp4_i2c_init_async(void *unused, async_cookie_t cookie)
 static int __init cyttsp4_i2c_init(void)
 {
 	async_schedule_domain(cyttsp4_i2c_init_async, NULL,
-			&cyttsp4_async_init_list);
+			&cyttsp4_async_domain);
 	return 0;
 }
 module_init(cyttsp4_i2c_init);

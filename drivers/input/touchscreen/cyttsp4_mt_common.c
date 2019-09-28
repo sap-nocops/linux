@@ -38,7 +38,7 @@ static int cyttsp4_mt_enable(struct device *dev);
 static int cyttsp4_mt_disable(struct device *dev);
 #endif
 
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
 static int cyttsp4_mt_suspend(struct device *dev);
 static int cyttsp4_mt_resume(struct device *dev);
 #endif
@@ -401,7 +401,7 @@ static void cyttsp4_mt_early_suspend(struct early_suspend *h)
 
 	dev_vdbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = true;
 	cyttsp4_lift_all(md);
@@ -419,7 +419,7 @@ static void cyttsp4_mt_late_resume(struct early_suspend *h)
 
 	dev_vdbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = false;
 	mutex_unlock(&md->report_lock);
@@ -488,7 +488,7 @@ static void cyttsp4_setup_early_suspend(struct cyttsp4_mt_data *md)
 
 #endif
 
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
 
 static int cyttsp4_mt_rt_suspend(struct device *dev)
 {
@@ -539,7 +539,7 @@ static int cyttsp4_mt_pm_runtime_force_suspend(struct device *dev)
 
 	/*
 	 * Note that pm_runtime_status_suspended() returns false while
-	 * !CONFIG_PM_RUNTIME, which means the device will be put into low
+	 * !CONFIG_PM, which means the device will be put into low
 	 * power state.
 	 */
 	if (pm_runtime_status_suspended(dev))
@@ -563,7 +563,7 @@ static int cyttsp4_mt_suspend(struct device *dev)
 
 	dev_vdbg(dev, "%s\n", __func__);
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 	cyttsp4_mt_pm_runtime_force_suspend(dev);
 #endif
 
@@ -586,12 +586,12 @@ static int cyttsp4_mt_resume(struct device *dev)
 
 static int cyttsp4_mt_enable(struct device *dev)
 {
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	struct cyttsp4_mt_data *md = dev_get_drvdata(dev);
 #endif
 	dev_vdbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = false;
 	mutex_unlock(&md->report_lock);
@@ -608,7 +608,7 @@ static int cyttsp4_mt_disable(struct device *dev)
 
 	dev_vdbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = true;
 	cyttsp4_lift_all(md);

@@ -35,7 +35,7 @@
 #include <linux/cyttsp4_core.h>
 #include "cyttsp4_regs.h"
 
-#define TOUCH_SWITCH_EN 20
+#define TOUCH_SWITCH_EN 133
 
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_FW_UPGRADE
 #include "cyttsp4_img.h"
