@@ -1231,14 +1231,6 @@ static int __maybe_unused edt_ft5x06_ts_suspend(struct device *dev)
 
 	if (device_may_wakeup(dev))
 		enable_irq_wake(client->irq);
-	else
-		regulator_disable(tsdata->vcc);
-
-	if (tsdata->wake_gpio)
-		gpiod_set_value(tsdata->wake_gpio, 0);
-
-	if (tsdata->reset_gpio)
-		gpiod_set_value(tsdata->reset_gpio, 1);
 
 	return 0;
 }
@@ -1251,19 +1243,6 @@ static int __maybe_unused edt_ft5x06_ts_resume(struct device *dev)
 
 	if (device_may_wakeup(dev))
 		disable_irq_wake(client->irq);
-	else {
-		ret = regulator_enable(tsdata->vcc);
-		if (ret < 0) {
-			dev_err(dev, "failed to enable vcc: %d\n", ret);
-			return ret;
-		}
-	}
-
-	if (tsdata->wake_gpio)
-		gpiod_set_value(tsdata->wake_gpio, 1);
-
-	if (tsdata->reset_gpio)
-		gpiod_set_value(tsdata->reset_gpio, 0);
 
 	return 0;
 }
