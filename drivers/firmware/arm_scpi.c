@@ -918,12 +918,12 @@ static int scpi_probe(struct platform_device *pdev)
 		dev_err(dev, "no mboxes property in '%pOF'\n", np);
 		return -ENODEV;
 	}
-	
+
 	if (count % 2 != 0) {
 		dev_err(dev, "mboxes must have even count in '%pOF'\n", np);
 		return -EINVAL;
 	}
-	
+
 	count /= 2;
 
 	scpi_info->channels = devm_kcalloc(dev, count, sizeof(struct scpi_chan),
