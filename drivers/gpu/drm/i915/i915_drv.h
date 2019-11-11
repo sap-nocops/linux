@@ -1073,6 +1073,7 @@ struct i915_frontbuffer_tracking {
 };
 
 struct i915_virtual_gpu {
+	struct mutex lock; /* serialises sending of g2v_notify command pkts */
 	bool active;
 	u32 caps;
 };
@@ -1879,6 +1880,8 @@ struct drm_i915_private {
 		 */
 		struct work_struct idle_work;
 	} gem;
+
+	u8 pch_ssc_use;
 
 	/* For i945gm vblank irq vs. C3 workaround */
 	struct {
