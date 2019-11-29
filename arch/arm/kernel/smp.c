@@ -240,6 +240,8 @@ int __cpu_disable(void)
 	if (ret)
 		return ret;
 
+	remove_cpu_topology(cpu);
+
 	/*
 	 * Take this CPU offline.  Once we clear this, we can't return,
 	 * and we must not schedule until we're ready to give up the cpu.
