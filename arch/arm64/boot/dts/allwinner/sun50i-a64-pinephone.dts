@@ -89,20 +89,11 @@
 		};
 	};
 
-	reg_3v3_wifi: regulator-3v3-wifi{
+	reg_3v3_wifi: regulator-3v3-wifi {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc-wifi";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-	};
-
-	reg_vbat_4g: regulator-vbat-4g{
-		compatible = "regulator-fixed";
-		regulator-name = "vbat-4g";
-		regulator-min-microvolt = <3700000>;
-		regulator-max-microvolt = <3700000>;
-		gpio = <&r_pio 0 7 GPIO_ACTIVE_HIGH>; /* PL7 */
-		enable-active-high;
 	};
 
 	reg_vcc5v0: regulator-vcc5v0 {
@@ -579,6 +570,5 @@
 };
 
 &usbphy {
-	usb1_vbus-supply = <&reg_vbat_4g>;
 	status = "okay";
 };
