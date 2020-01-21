@@ -233,8 +233,9 @@ void store_cpu_topology(unsigned int cpuid)
 	update_cpu_capacity(cpuid);
 
 	pr_info("CPU%u: thread %d, cpu %d, socket %d, mpidr %x\n",
-		cpuid, cpuid_topo->thread_id, cpuid_topo->core_id,
-		cpuid_topo->package_id, mpidr);
+		cpuid, cpu_topology[cpuid].thread_id,
+		cpu_topology[cpuid].core_id,
+		cpu_topology[cpuid].package_id, mpidr);
 
 topology_populated:
 	update_siblings_masks(cpuid);
