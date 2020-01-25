@@ -1947,6 +1947,7 @@ xclk_off:
 power_off:
 	hm5065_chip_enable(sensor, false);
 	regulator_bulk_disable(HM5065_NUM_SUPPLIES, sensor->supplies);
+	msleep(100);
 	return ret;
 }
 
