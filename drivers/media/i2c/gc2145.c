@@ -1885,6 +1885,7 @@ power_off:
 	gpiod_direction_input(sensor->reset_gpio);
 	gpiod_direction_input(sensor->enable_gpio);
 	regulator_bulk_disable(GC2145_NUM_SUPPLIES, sensor->supplies);
+	msleep(100);
 	return ret;
 }
 
