@@ -94,6 +94,8 @@
 
 		simple-audio-card,cpu {
 			sound-dai = <&i2s0>;
+			dai-tdm-slot-num = <2>;
+			dai-tdm-slot-width = <16>;
 		};
 
 		dailink0_master: simple-audio-card,codec {
