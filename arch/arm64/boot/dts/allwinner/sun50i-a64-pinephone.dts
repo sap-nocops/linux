@@ -84,6 +84,8 @@
 		vin-supply = <&reg_vcc5v0>;
 	};
 
+// I don't want this managed by the kernel yet
+#if 0
 	reg_vbat_bb: vbat-bb {
 		compatible = "regulator-fixed";
 		regulator-name = "vbat-bb";
@@ -92,6 +94,7 @@
 		gpio = <&r_pio 0 7 GPIO_ACTIVE_HIGH>; /* PL7 */
 		enable-active-high;
 	};
+#endif
 
 	reg_vbat_wifi: vbat-wifi {
 		compatible = "regulator-fixed";
