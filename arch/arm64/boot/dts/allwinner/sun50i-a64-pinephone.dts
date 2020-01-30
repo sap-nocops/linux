@@ -331,8 +331,10 @@
 	lis3mdl@1e {
 		compatible = "st,lis3mdl-magn";
 		reg = <0x1e>;
-		interrupt-parent = <&pio>;
-		interrupts = <1 1 IRQ_TYPE_EDGE_RISING>; /* PB1 */
+		// The driver wants DRDY on the interrupt line, not INT pin
+		// therefore we can't use interrupts.
+		//interrupt-parent = <&pio>;
+		//interrupts = <1 1 IRQ_TYPE_EDGE_RISING>; /* PB1 */
 		vdd-supply = <&reg_dldo1>;
 		vddio-supply = <&reg_dldo1>;
 	};
