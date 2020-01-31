@@ -151,11 +151,6 @@
 		enable-gpios = <&pio 3 2 GPIO_ACTIVE_HIGH>; /* PD2 */
 		vcc-supply = <&reg_dcdc1>;
 	};
-
-	wifi_pwrseq: wifi_pwrseq {
-		compatible = "mmc-pwrseq-simple";
-		reset-gpios = <&r_pio 0 2 GPIO_ACTIVE_LOW>; /* PL2 */
-	};
 };
 
 &codec {
@@ -416,7 +411,6 @@
 	pinctrl-0 = <&mmc1_pins>;
 	vmmc-supply = <&reg_vbat_wifi>;
 	vqmmc-supply = <&reg_dldo4>;
-	mmc-pwrseq = <&wifi_pwrseq>;
 	bus-width = <4>;
 	non-removable;
 	status = "okay";
