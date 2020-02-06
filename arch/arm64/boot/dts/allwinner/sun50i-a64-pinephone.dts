@@ -127,6 +127,7 @@
 		sound-name-prefix = "Speaker Amp";
 	};
 
+#if 0
 	sound-modem {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "EC25 audio";
@@ -145,6 +146,7 @@
 			sound-dai = <&ec25_codec>;
 		};
 	};
+#endif
 
 	vibrator {
 		compatible = "gpio-vibrator";
@@ -154,6 +156,8 @@
 };
 
 &codec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&aif2_pins>, <&aif3_pins>;
 	status = "okay";
 };
 
@@ -365,12 +369,14 @@
 	status = "okay";
 };
 
+#if 0
 &i2s0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2s0_pins>;
 	status = "okay";
 	pinephone-channel-offset-hack;
 };
+#endif
 
 &lradc {
 	vref-supply = <&reg_aldo3>;
@@ -627,26 +633,42 @@
 &sound {
 	status = "okay";
 	simple-audio-card,aux-devs = <&codec_analog>, <&speaker_amp>;
-	simple-audio-card,widgets = "Microphone", "Internal Microphone Left",
-				    "Microphone", "Internal Microphone Right",
+	simple-audio-card,widgets = "Microphone", "Headset Microphone",
+				    "Microphone", "Internal Microphone",
 				    "Headphone", "Headphone Jack",
-				    "Speaker", "Internal Speaker",
-				    "Speaker", "Internal Earpiece";
+				    "Speaker", "Internal Earpiece",
+				    "Speaker", "Internal Speaker";
 	simple-audio-card,routing =
-			"Left DAC", "AIF1 Slot 0 Left",
-			"Right DAC", "AIF1 Slot 0 Right",
-			"Speaker Amp INL", "LINEOUT",
-			"Speaker Amp INR", "LINEOUT",
+			"Headphone Jack", "HP",
+			"Internal Earpiece", "EARPIECE",
 			"Internal Speaker", "Speaker Amp OUTL",
 			"Internal Speaker", "Speaker Amp OUTR",
-			"Internal Earpiece", "EARPIECE",
-			"Headphone Jack", "HP",
-			"AIF1 Slot 0 Left ADC", "Left ADC",
-			"AIF1 Slot 0 Right ADC", "Right ADC",
-			"Internal Microphone Left", "MBIAS",
-			"MIC1", "Internal Microphone Left",
-			"Internal Microphone Right", "HBIAS",
-			"MIC2", "Internal Microphone Right";
+			"Speaker Amp INL", "LINEOUT",
+			"Speaker Amp INR", "LINEOUT",
+			"Left DAC", "DAC Left",
+			"Right DAC", "DAC Right",
+			"ADC Left", "Left ADC",
+			"ADC Right", "Right ADC",
+			"Internal Microphone", "MBIAS",
+			"MIC1", "Internal Microphone",
+			"Headset Microphone", "HBIAS",
+			"MIC2", "Headset Microphone";
+
+	simple-audio-card,dai-link@1 {
+		format = "dsp_a";
+		frame-master = <&link1_cpu>;
+		bitclock-master = <&link1_cpu>;
+		bitclock-inversion;
+		codec-to-codec;
+
+		link1_cpu: cpu {
+			sound-dai = <&ec25_codec>;
+		};
+
+		link1_codec: codec {
+			sound-dai = <&codec 1>;
+		};
+	};
 };
 
 &uart0 {
