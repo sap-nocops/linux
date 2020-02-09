@@ -127,27 +127,6 @@
 		sound-name-prefix = "Speaker Amp";
 	};
 
-#if 0
-	sound-modem {
-		compatible = "simple-audio-card";
-		simple-audio-card,name = "EC25 audio";
-		simple-audio-card,format = "dsp_a";
-		simple-audio-card,mclk-fs = <256>;
-		simple-audio-card,bitclock-master = <&dailink0_master>;
-		simple-audio-card,frame-master = <&dailink0_master>;
-
-		simple-audio-card,cpu {
-			sound-dai = <&i2s0>;
-			dai-tdm-slot-num = <2>;
-			dai-tdm-slot-width = <16>;
-		};
-
-		dailink0_master: simple-audio-card,codec {
-			sound-dai = <&ec25_codec>;
-		};
-	};
-#endif
-
 	vibrator {
 		compatible = "gpio-vibrator";
 		enable-gpios = <&pio 3 2 GPIO_ACTIVE_HIGH>; /* PD2 */
@@ -368,15 +347,6 @@
 	pinctrl-0 = <&i2c2_pins>;
 	status = "okay";
 };
-
-#if 0
-&i2s0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2s0_pins>;
-	status = "okay";
-	pinephone-channel-offset-hack;
-};
-#endif
 
 &lradc {
 	vref-supply = <&reg_aldo3>;
