@@ -526,7 +526,7 @@ static const struct snd_kcontrol_new ac100_codec_hp_switch =
 /* Earpiece */
 
 static const struct snd_kcontrol_new ac100_codec_earpiece_switch =
-	SOC_DAPM_SINGLE("Earpiece Playback Switch",
+	SOC_DAPM_SINGLE("Playback Switch",
 			AC100_ERPOUT_CTRL,
 			AC100_ERPOUT_CTRL_MUTE_OFF, 1, 0);
 
@@ -576,22 +576,22 @@ static const struct snd_kcontrol_new ac100_codec_spk_inv_switch =
 /* Line Out */
 
 static const struct snd_kcontrol_new ac100_codec_lineout_mixer_controls[] = {
-	SOC_DAPM_SINGLE("Line Out Mic1 Playback Switch",
+	SOC_DAPM_SINGLE("Mic1 Playback Switch",
 			AC100_LINEOUT_CTRL,
 			AC100_LINEOUT_CTRL_LINEOUT_S0_OFF, 1, 0),
-	SOC_DAPM_SINGLE("Line Out Mic2 Playback Switch",
+	SOC_DAPM_SINGLE("Mic2 Playback Switch",
 			AC100_LINEOUT_CTRL,
 			AC100_LINEOUT_CTRL_LINEOUT_S1_OFF, 1, 0),
-	SOC_DAPM_SINGLE("Line Out Right Mixer Playback Switch",
+	SOC_DAPM_SINGLE("Right Mixer Playback Switch",
 			AC100_LINEOUT_CTRL,
 			AC100_LINEOUT_CTRL_LINEOUT_S2_OFF, 1, 0),
-	SOC_DAPM_SINGLE("Line Out Left Mixer Playback Switch",
+	SOC_DAPM_SINGLE("Left Mixer Playback Switch",
 			AC100_LINEOUT_CTRL,
 			AC100_LINEOUT_CTRL_LINEOUT_S3_OFF, 1, 0),
 };
 
 static const struct snd_kcontrol_new ac100_codec_lineout_switch =
-	SOC_DAPM_SINGLE("Line Out Playback Switch",
+	SOC_DAPM_SINGLE("Playback Switch",
 			AC100_LINEOUT_CTRL,
 			AC100_LINEOUT_CTRL_LINEOUT_EN_OFF, 1, 0);
 
@@ -653,7 +653,7 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 
 	SND_SOC_DAPM_MUX("Earpiece Mux",
 			 SND_SOC_NOPM, 0, 0, ac100_codec_earpiece_src),
-	SND_SOC_DAPM_SWITCH("Earpiece Switch",
+	SND_SOC_DAPM_SWITCH("Earpiece",
 			    SND_SOC_NOPM, 0, 0, &ac100_codec_earpiece_switch),
 	SND_SOC_DAPM_OUT_DRV("Earpiece Amp", AC100_ERPOUT_CTRL,
 			     AC100_ERPOUT_CTRL_PA_EN_OFF, 0, NULL, 0),
@@ -681,7 +681,7 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 	SND_SOC_DAPM_MIXER("Line Out Mixer", SND_SOC_NOPM, 0, 0,
 			   ac100_codec_lineout_mixer_controls,
 			   ARRAY_SIZE(ac100_codec_lineout_mixer_controls)),
-	SND_SOC_DAPM_SWITCH("Line Out Switch",
+	SND_SOC_DAPM_SWITCH("Line Out",
 			    SND_SOC_NOPM, 0, 0, &ac100_codec_lineout_switch),
 	SND_SOC_DAPM_OUTPUT("LINEOUT"),
 
@@ -813,17 +813,17 @@ static const struct snd_soc_dapm_route ac100_codec_routes[] = {
 	{ "Earpiece Mux", "DACL", "Left DAC" },
 	{ "Earpiece Mux", "Right Mixer", "Right Mixer" },
 	{ "Earpiece Mux", "Left Mixer", "Left Mixer" },
-	{ "Earpiece Switch", "Earpiece Playback Switch", "Earpiece Mux" },
-	{ "Earpiece Amp", NULL, "Earpiece Switch" },
+	{ "Earpiece", "Playback Switch", "Earpiece Mux" },
+	{ "Earpiece Amp", NULL, "Earpiece" },
 	{ "EARPIECE", NULL, "Earpiece Amp" },
 
 	/* Line-out Routes */
-	{ "Line Out Switch", "Line Out Playback Switch", "Line Out Mixer" },
-	{ "Line Out Mixer", "Line Out Mic1 Playback Switch", "Mic1 Amplifier" },
-	{ "Line Out Mixer", "Line Out Mic2 Playback Switch", "Mic2 Amplifier" },
-	{ "Line Out Mixer", "Line Out Right Mixer Playback Switch", "Right Mixer" },
-	{ "Line Out Mixer", "Line Out Left Mixer Playback Switch", "Left Mixer" },
-	{ "LINEOUT", NULL, "Line Out Switch" },
+	{ "Line Out", "Playback Switch", "Line Out Mixer" },
+	{ "Line Out Mixer", "Mic1 Playback Switch", "Mic1 Amplifier" },
+	{ "Line Out Mixer", "Mic2 Playback Switch", "Mic2 Amplifier" },
+	{ "Line Out Mixer", "Right Mixer Playback Switch", "Right Mixer" },
+	{ "Line Out Mixer", "Left Mixer Playback Switch", "Left Mixer" },
+	{ "LINEOUT", NULL, "Line Out" },
 };
 
 static const struct snd_soc_component_driver ac100_codec_analog_cmpnt_drv = {
