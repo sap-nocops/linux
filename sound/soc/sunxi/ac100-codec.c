@@ -445,7 +445,7 @@ static const struct snd_kcontrol_new ac100_codec_controls[] = {
 		       ac100_codec_mic_gain_scale),
 
 	SOC_SINGLE_TLV("Mic2 Boost Volume", AC100_ADC_SRC_BST_CTRL,
-		       AC100_ADC_SRC_BST_CTRL_MIC1BOOST_OFF, 0x7, 0,
+		       AC100_ADC_SRC_BST_CTRL_MIC2BOOST_OFF, 0x7, 0,
 		       ac100_codec_mic_gain_scale),
 
 	SOC_SINGLE_TLV("Line In Pre-Gain Volume", AC100_ADC_SRC_BST_CTRL,
