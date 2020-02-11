@@ -611,6 +611,26 @@ static const struct snd_kcontrol_new ac100_codec_mic2boost_src[] = {
 		      ac100_codec_mic2boost_src_enum),
 };
 
+/* This is done to remove the headphone buffer DC offset. */
+static int ac100_codec_hp_power(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
+	unsigned int val = SND_SOC_DAPM_EVENT_ON(event) ? 0xf : 0;
+
+	// zero cross detection
+	if (SND_SOC_DAPM_EVENT_ON(event)) {
+		snd_soc_component_update_bits(component, 0x5a, BIT(8), BIT(8));
+	} else {
+		snd_soc_component_update_bits(component, 0x5a, BIT(8), 0);
+	}
+
+	snd_soc_component_update_bits(component, AC100_OUT_MXR_DAC_A_CTRL,
+				      AC100_OUT_MXR_DAC_A_CTRL_HP_DCRM_EN(0xf),
+				      AC100_OUT_MXR_DAC_A_CTRL_HP_DCRM_EN(val));
+	return 0;
+}
+
 static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 	/* DAC */
 	SND_SOC_DAPM_DAC("Left DAC", NULL, AC100_OUT_MXR_DAC_A_CTRL,
@@ -646,7 +666,9 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 	SND_SOC_DAPM_OUT_DRV("Right Headphone Amp",
 			     SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_SUPPLY("Headphone Amp", AC100_HPOUT_CTRL,
-			    AC100_HPOUT_CTRL_PA_EN_OFF, 0, NULL, 0),
+			    AC100_HPOUT_CTRL_PA_EN_OFF, 0,
+			    ac100_codec_hp_power,
+			    SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD),
 	SND_SOC_DAPM_OUTPUT("HP"),
 
         /* Earpiece */
