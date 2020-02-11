@@ -437,6 +437,52 @@ static const DECLARE_TLV_DB_SCALE(ac100_codec_lineout_vol_scale, -450, 150, 0);
 
 static const DECLARE_TLV_DB_SCALE(ac100_codec_hp_vol_scale, -6300, 100, 1);
 
+static const char *ac100_codec_hp_pa_delay_texts[] = {
+	"4ms", "8ms", "16ms", "32ms"
+};
+
+static SOC_ENUM_SINGLE_DECL(ac100_codec_hp_pa_delay_enum,
+			    AC100_HPOUT_CTRL,
+			    AC100_HPOUT_CTRL_STARTUP_DELAY_OFF,
+			    ac100_codec_hp_pa_delay_texts);
+
+static const char *ac100_codec_hp_pa_cur_texts[] = {
+	"low", "mid", "higher", "highest"
+};
+
+static SOC_ENUM_SINGLE_DECL(ac100_codec_hp_pa_cur_enum,
+			    AC100_HPOUT_CTRL,
+			    AC100_HPOUT_CTRL_OUTPUT_CURRENT_OFF,
+			    ac100_codec_hp_pa_cur_texts);
+
+static SOC_ENUM_SINGLE_DECL(ac100_codec_ep_pa_cur_enum,
+			    AC100_ERPOUT_CTRL,
+			    AC100_ERPOUT_CTRL_OUT_CURRENT_OFF,
+			    ac100_codec_hp_pa_cur_texts);
+
+static const char *ac100_codec_ep_pa_ramp_time_texts[] = {
+	"256ms", "512ms", "640ms", "768ms"
+};
+
+static SOC_ENUM_SINGLE_DECL(ac100_codec_ep_pa_ramp_time_enum,
+			    AC100_ERPOUT_CTRL,
+			    AC100_ERPOUT_CTRL_RAMP_TIME_OFF,
+			    ac100_codec_ep_pa_ramp_time_texts);
+
+static const char *ac100_codec_mic_bv_texts[] = {
+	"1.88V", "2.09V", "2.33V", "2.5V"
+};
+
+static SOC_ENUM_SINGLE_DECL(ac100_codec_mic1_bv_enum,
+			    AC100_OUT_MXR_SRC_BST,
+			    AC100_OUT_MXR_SRC_BST_MMICBIAS_VOLTAGE_OFF,
+			    ac100_codec_mic_bv_texts);
+
+static SOC_ENUM_SINGLE_DECL(ac100_codec_mic2_bv_enum,
+			    AC100_OUT_MXR_SRC_BST,
+			    AC100_OUT_MXR_SRC_BST_HMICBIAS_VOLTAGE_OFF,
+			    ac100_codec_mic_bv_texts);
+
 /* volume / mute controls */
 static const struct snd_kcontrol_new ac100_codec_controls[] = {
 	/* Microphone Amp boost gain */
@@ -498,6 +544,17 @@ static const struct snd_kcontrol_new ac100_codec_controls[] = {
 		       AC100_LINEOUT_CTRL,
 		       AC100_LINEOUT_CTRL_LINEOUT_GAIN_OFF, 0x7, 0,
 		       ac100_codec_lineout_vol_scale),
+
+	SOC_ENUM("Headphone Amplifier Startup Delay",
+		 ac100_codec_hp_pa_delay_enum),
+	SOC_ENUM("Headphone Amplifier Current", ac100_codec_hp_pa_cur_enum),
+
+	SOC_ENUM("Earpiece Amplifier Ramp Time",
+		 ac100_codec_ep_pa_ramp_time_enum),
+	SOC_ENUM("Earpiece Amplifier Current", ac100_codec_ep_pa_cur_enum),
+
+	SOC_ENUM("Mic1 Bias Voltage", ac100_codec_mic1_bv_enum),
+	SOC_ENUM("Mic2 Bias Voltage", ac100_codec_mic2_bv_enum),
 };
 
 /* Headphone */
