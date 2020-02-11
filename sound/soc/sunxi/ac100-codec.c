@@ -153,14 +153,14 @@
 #define AC100_OUT_MXR_DAC_A_CTRL_DAC_AL_EN_MASK                 BIT(14)
 #define AC100_OUT_MXR_DAC_A_CTRL_DAC_AL_EN_DISABLED             0
 #define AC100_OUT_MXR_DAC_A_CTRL_DAC_AL_EN_ENABLED              BIT(14)
-#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_OFF                  13
-#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_MASK                 BIT(13)
-#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_DISABLED             0
-#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_ENABLED              BIT(13)
-#define AC100_OUT_MXR_DAC_A_CTRL_AR_MIX_EN_OFF                  12
-#define AC100_OUT_MXR_DAC_A_CTRL_AR_MIX_EN_MASK                 BIT(12)
+#define AC100_OUT_MXR_DAC_A_CTRL_AR_MIX_EN_OFF                  13
+#define AC100_OUT_MXR_DAC_A_CTRL_AR_MIX_EN_MASK                 BIT(13)
 #define AC100_OUT_MXR_DAC_A_CTRL_AR_MIX_EN_DISABLED             0
-#define AC100_OUT_MXR_DAC_A_CTRL_AR_MIX_EN_ENABLED              BIT(12)
+#define AC100_OUT_MXR_DAC_A_CTRL_AR_MIX_EN_ENABLED              BIT(13)
+#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_OFF                  12
+#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_MASK                 BIT(12)
+#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_DISABLED             0
+#define AC100_OUT_MXR_DAC_A_CTRL_AL_MIX_EN_ENABLED              BIT(12)
 #define AC100_OUT_MXR_DAC_A_CTRL_HP_DCRM_EN_OFF                 8
 #define AC100_OUT_MXR_DAC_A_CTRL_HP_DCRM_EN(v)                  (((v) & 0xf) << 8)
 
@@ -347,6 +347,13 @@
 #define AC100_LINEOUT_CTRL_LINEOUT_S3_MASK                      BIT(0)
 #define AC100_LINEOUT_CTRL_LINEOUT_S3_MUTE                      0
 #define AC100_LINEOUT_CTRL_LINEOUT_S3_ON                        BIT(0)
+
+#define AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_OFF                  8
+#define AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_MASK                 BIT(8)
+#define AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_DIS                  0
+#define AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_EN                   BIT(8)
+#define AC100_ADDA_TUNE1_ZERO_CROSSOVER_TIME_OFF                7
+#define AC100_ADDA_TUNE1_ZERO_CROSSOVER_TIME                    BIT(7)
 
 struct ac100_codec {
 	struct device *dev;
@@ -676,10 +683,16 @@ static int ac100_codec_hp_power(struct snd_soc_dapm_widget *w,
 	unsigned int val = SND_SOC_DAPM_EVENT_ON(event) ? 0xf : 0;
 
 	// zero cross detection
-	if (SND_SOC_DAPM_EVENT_ON(event)) {
-		snd_soc_component_update_bits(component, 0x5a, BIT(8), BIT(8));
+	if (SND_SOC_DAPM_EVENT_OFF(event)) {
+		snd_soc_component_update_bits(component,
+					      AC100_ADDA_TUNE1,
+					      AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_MASK,
+					      AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_EN);
 	} else {
-		snd_soc_component_update_bits(component, 0x5a, BIT(8), 0);
+		snd_soc_component_update_bits(component,
+					      AC100_ADDA_TUNE1,
+					      AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_MASK,
+					      AC100_ADDA_TUNE1_ZERO_CROSSOVER_EN_DIS);
 	}
 
 	snd_soc_component_update_bits(component, AC100_OUT_MXR_DAC_A_CTRL,
@@ -876,14 +889,14 @@ static const struct snd_soc_dapm_route ac100_codec_routes[] = {
 
 	/* Speaker Routes */
 	{ "Left Speaker Mux", "Stereo", "Left Mixer" },
-	{ "Left Speaker Mux", "Stereo", "Right Mixer" },
+	{ "Left Speaker Mux", "Mono", "Right Mixer" },
 	{ "Left Speaker Mux", "Mono", "Left Mixer" },
 	{ "Left Speaker Switch", "Speaker Playback Switch", "Left Speaker Mux" },
 	{ "SPKOUTL", NULL, "Left Speaker Switch" },
 
-	{ "Right Speaker Mux", "Stereo", "Left Mixer" },
 	{ "Right Speaker Mux", "Stereo", "Right Mixer" },
 	{ "Right Speaker Mux", "Mono", "Right Mixer" },
+	{ "Right Speaker Mux", "Mono", "Left Mixer" },
 	{ "Right Speaker Switch", "Speaker Playback Switch", "Right Speaker Mux" },
 	{ "SPKOUTR", NULL, "Right Speaker Switch" },
 
