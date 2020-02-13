@@ -165,7 +165,7 @@
 	};
 
 	modem {
-		compatible = "custom,power-manager";
+		compatible = "custom,power-manager-mg3732";
 		//megi: switching Q5 MOSFET probably leads to brownouts on
 		//VBAT due to larger capacities on VMAIN. Only use PL8 to
 		//enable/disable the modem
@@ -173,7 +173,6 @@
 		enable-gpios = <&r_pio 0 8 GPIO_ACTIVE_HIGH>; /* PL8 */
 		reset-gpios = <&r_pio 0 10 GPIO_ACTIVE_HIGH>; /* PL10 */
 		wakeup-gpios = <&r_pio 0 11 GPIO_ACTIVE_HIGH>; /* PL11 */
-		reset-duration-ms = <5>;
 		char-device-name = "pwr-modem";
 	};
 
