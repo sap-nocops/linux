@@ -6,6 +6,7 @@
 #include <linux/poll.h>
 #include <linux/spinlock.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/gpio/consumer.h>
 #include <linux/regulator/consumer.h>
@@ -26,15 +27,34 @@ enum {
 	A711_REQ_PWUP,
 };
 
+struct a711_dev;
+
+struct a711_variant {
+	u32 reset_duration;
+	int (*power_init)(struct a711_dev* a711);
+	int (*power_up)(struct a711_dev* a711);
+	int (*power_down)(struct a711_dev* a711);
+	int (*reset)(struct a711_dev* a711);
+};
+
 struct a711_dev {
 	struct device *dev;
+	const struct a711_variant* variant;
 
+	/* power */
+	struct regulator *regulator;
+
+	/* outputs */
 	struct gpio_desc *enable_gpio;
 	struct gpio_desc *reset_gpio;
+	struct gpio_desc *pwrkey_gpio;
+	struct gpio_desc *sleep_gpio;
+
+	/* inputs */
 	struct gpio_desc *wakeup_gpio;
-	struct regulator *regulator;
 	int wakeup_irq;
-	u32 reset_duration;
+
+	/* config */
 	struct cdev cdev;
 	dev_t major;
 
@@ -48,40 +68,149 @@ struct a711_dev {
 	int is_enabled;
 };
 
+static int a711_generic_reset(struct a711_dev* a711)
+{
+	gpiod_set_value(a711->reset_gpio, 1);
+	msleep(a711->variant->reset_duration);
+	gpiod_set_value(a711->reset_gpio, 0);
+	return 0;
+}
+
+// mg2723
+
+static int a711_mg2723_power_init(struct a711_dev* a711)
+{
+	// if the device has power applied or doesn't have regulator
+	// configured (we assume it's always powered) initialize GPIO
+	// to shut it down initially
+	if (!a711->regulator || regulator_is_enabled(a711->regulator)) {
+		gpiod_set_value(a711->enable_gpio, 0);
+		gpiod_set_value(a711->sleep_gpio, 1);
+		gpiod_set_value(a711->reset_gpio, 1);
+		gpiod_set_value(a711->pwrkey_gpio, 0);
+	} else {
+		// device is not powered, don't drive the gpios
+		gpiod_direction_input(a711->enable_gpio);
+		gpiod_direction_input(a711->reset_gpio);
+		gpiod_direction_input(a711->sleep_gpio);
+		gpiod_direction_input(a711->pwrkey_gpio);
+	}
+
+	return 0;
+}
+
+static int a711_mg2723_power_up(struct a711_dev* a711)
+{
+	int ret;
+
+	// power up
+	if (a711->regulator) {
+		ret = regulator_enable(a711->regulator);
+		if (ret < 0) {
+			dev_err(a711->dev,
+				"can't enable power supply err=%d", ret);
+			return ret;
+		}
+	}
+
+	gpiod_direction_output(a711->enable_gpio, 1);
+	gpiod_direction_output(a711->sleep_gpio, 0);
+
+	gpiod_direction_output(a711->reset_gpio, 1);
+	msleep(a711->variant->reset_duration);
+	gpiod_set_value(a711->reset_gpio, 0);
+
+	return 0;
+}
+
+static int a711_mg2723_power_down(struct a711_dev* a711)
+{
+	gpiod_set_value(a711->enable_gpio, 0);
+	gpiod_set_value(a711->sleep_gpio, 1);
+	gpiod_set_value(a711->pwrkey_gpio, 0);
+	msleep(50);
+
+	if (a711->regulator) {
+		regulator_disable(a711->regulator);
+
+		gpiod_direction_input(a711->enable_gpio);
+		gpiod_direction_input(a711->reset_gpio);
+		gpiod_direction_input(a711->sleep_gpio);
+		gpiod_direction_input(a711->pwrkey_gpio);
+	} else {
+		gpiod_set_value(a711->reset_gpio, 1);
+	}
+
+	return 0;
+}
+
+static const struct a711_variant a711_mg2723_variant = {
+	.power_init = a711_mg2723_power_init,
+	.power_up = a711_mg2723_power_up,
+	.power_down = a711_mg2723_power_down,
+	.reset = a711_generic_reset,
+	.reset_duration = 300,
+};
+
 static void a711_reset(struct a711_dev* a711)
 {
 	struct device *dev = a711->dev;
+	int ret;
 
-	if (!a711->is_enabled)
+	if (!a711->is_enabled) {
+		dev_err(dev, "reset requested but device is not enabled");
 		return;
+	}
 
 	if (!a711->reset_gpio) {
 		dev_err(dev, "reset is not configured for this device");
 		return;
 	}
 
-	dev_info(dev, "resetting");
+	if (!a711->variant->reset) {
+		dev_err(dev, "reset requested but not implemented");
+		return;
+	}
 
-	gpiod_set_value(a711->reset_gpio, 1);
-	msleep(a711->reset_duration);
-	gpiod_set_value(a711->reset_gpio, 0);
+	if (a711->wakeup_irq > 0)
+		disable_irq(a711->wakeup_irq);
+
+	dev_info(dev, "resetting");
+	ret = a711->variant->reset(a711);
+	if (ret) {
+		dev_err(dev, "reset failed");
+	}
+
+	if (a711->wakeup_irq > 0)
+		enable_irq(a711->wakeup_irq);
 }
 
 static void a711_power_down(struct a711_dev* a711)
 {
 	struct device *dev = a711->dev;
+	int ret;
 
 	if (!a711->is_enabled)
 		return;
 
-	dev_info(dev, "powering down");
+	if (!a711->variant->power_down) {
+		dev_err(dev, "power down requested but not implemented");
+		return;
+	}
 
-	gpiod_set_value(a711->enable_gpio, 0);
-	if (a711->regulator)
-		regulator_disable(a711->regulator);
-	else
-		gpiod_set_value(a711->reset_gpio, 1);
-	a711->is_enabled = 0;
+	if (a711->wakeup_irq > 0)
+		disable_irq(a711->wakeup_irq);
+
+	dev_info(dev, "powering down");
+	ret = a711->variant->power_down(a711);
+	if (ret) {
+		dev_err(dev, "power down failed");
+
+		if (a711->wakeup_irq > 0)
+			enable_irq(a711->wakeup_irq);
+	} else {
+		a711->is_enabled = 0;
+	}
 }
 
 static void a711_power_up(struct a711_dev* a711)
@@ -92,22 +221,21 @@ static void a711_power_up(struct a711_dev* a711)
 	if (a711->is_enabled)
 		return;
 
-	dev_info(dev, "powering up");
-
-	// power up
-	if (a711->regulator) {
-		ret = regulator_enable(a711->regulator);
-		if (ret < 0) {
-			dev_err(dev, "can't enable power supply err=%d", ret);
-			return;
-		}
+	if (!a711->variant->power_up) {
+		dev_err(dev, "power up requested but not implemented");
+		return;
 	}
 
-	gpiod_set_value(a711->enable_gpio, 1);
-	gpiod_set_value(a711->reset_gpio, 1);
-	msleep(a711->reset_duration);
-	gpiod_set_value(a711->reset_gpio, 0);
-	a711->is_enabled = 1;
+	dev_info(dev, "powering up");
+	ret = a711->variant->power_up(a711);
+	if (ret) {
+		dev_err(dev, "power up failed");
+	} else {
+		if (a711->wakeup_irq > 0)
+			enable_irq(a711->wakeup_irq);
+
+		a711->is_enabled = 1;
+	}
 }
 
 static struct class* a711_class;
@@ -261,7 +389,7 @@ static long a711_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		ret = 0;
 		break;
 	case A711_IOCTL_STATUS:
-		powered = a711->is_enabled || a711->last_request == A711_REQ_PWUP;
+		powered = a711->is_enabled;
 		spin_unlock_irqrestore(&a711->lock, flags);
 
 		if (copy_to_user(parg, &powered, sizeof powered))
@@ -346,18 +474,15 @@ static int a711_probe(struct platform_device *pdev)
 	if (!a711)
 		return -ENOMEM;
 
+	a711->variant = of_device_get_match_data(&pdev->dev);
+	if (!a711->variant)
+		return -EINVAL;
+
 	a711->dev = dev;
 	platform_set_drvdata(pdev, a711);
 	init_waitqueue_head(&a711->waitqueue);
 	spin_lock_init(&a711->lock);
 	INIT_WORK(&a711->work, &a711_work_handler);
-
-	// get device name and reset time from device tree
-	ret = of_property_read_u32_index(np, "reset-duration-ms", 0,
-					 &a711->reset_duration);
-	if (ret) {
-		a711->reset_duration = 10;
-	}
 
 	ret = of_property_read_string(np, "char-device-name", &cdev_name);
 	if (ret) {
@@ -365,7 +490,7 @@ static int a711_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	a711->enable_gpio = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_HIGH);
+	a711->enable_gpio = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_LOW);
 	if (IS_ERR(a711->enable_gpio)) {
 		dev_err(dev, "can't get enable gpio err=%ld",
 			PTR_ERR(a711->enable_gpio));
@@ -377,6 +502,20 @@ static int a711_probe(struct platform_device *pdev)
 		dev_err(dev, "can't get reset gpio err=%ld",
 			PTR_ERR(a711->reset_gpio));
 		return PTR_ERR(a711->reset_gpio);
+	}
+
+	a711->pwrkey_gpio = devm_gpiod_get_optional(dev, "pwrkey", GPIOD_OUT_LOW);
+	if (IS_ERR(a711->pwrkey_gpio)) {
+		dev_err(dev, "can't get pwrkey gpio err=%ld",
+			PTR_ERR(a711->pwrkey_gpio));
+		return PTR_ERR(a711->pwrkey_gpio);
+	}
+
+	a711->sleep_gpio = devm_gpiod_get_optional(dev, "sleep", GPIOD_OUT_HIGH);
+	if (IS_ERR(a711->sleep_gpio)) {
+		dev_err(dev, "can't get sleep gpio err=%ld",
+			PTR_ERR(a711->sleep_gpio));
+		return PTR_ERR(a711->sleep_gpio);
 	}
 
 	a711->wakeup_gpio = devm_gpiod_get_optional(dev, "wakeup", GPIOD_IN);
@@ -397,6 +536,9 @@ static int a711_probe(struct platform_device *pdev)
 			dev_err(dev, "error requesting wakeup-irq: %d", ret);
 			return ret;
 		}
+
+		// disable irq until we power up the modem
+		disable_irq(a711->wakeup_irq);
 	}
 
 	a711->regulator = devm_regulator_get_optional(dev, "power");
@@ -431,9 +573,7 @@ static int a711_probe(struct platform_device *pdev)
 		goto err_del_cdev;
 	}
 
-	gpiod_set_value(a711->enable_gpio, 0);
-	if (!a711->regulator)
-		gpiod_set_value(a711->reset_gpio, 1);
+	a711->variant->power_init(a711);
 
 	dev_info(dev, "initialized TBS A711 platform driver");
 
@@ -452,9 +592,8 @@ static int a711_remove(struct platform_device *pdev)
 {
 	struct a711_dev *a711 = platform_get_drvdata(pdev);
 
-	a711_power_down(a711);
-
 	cancel_work_sync(&a711->work);
+	a711_power_down(a711);
 
 	device_destroy(a711_class, a711->major);
 	cdev_del(&a711->cdev);
@@ -466,8 +605,16 @@ static int a711_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void a711_shutdown(struct platform_device *pdev)
+{
+	struct a711_dev *a711 = platform_get_drvdata(pdev);
+
+	a711_power_down(a711);
+}
+
 static const struct of_device_id a711_of_match[] = {
-	{ .compatible = "custom,power-manager" },
+	{ .compatible = "custom,power-manager-mg3732",
+	  .data = &a711_mg2723_variant },
 	{},
 };
 MODULE_DEVICE_TABLE(of, a711_of_match);
@@ -475,6 +622,7 @@ MODULE_DEVICE_TABLE(of, a711_of_match);
 static struct platform_driver a711_platform_driver = {
 	.probe = a711_probe,
 	.remove = a711_remove,
+	.shutdown = a711_shutdown,
 	.driver = {
 		.name = DRIVER_NAME,
 		.of_match_table = a711_of_match,
