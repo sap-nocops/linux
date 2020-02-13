@@ -152,6 +152,79 @@ static const struct a711_variant a711_mg2723_variant = {
 	.reset_duration = 300,
 };
 
+// eg25
+
+static int a711_eg25_power_up(struct a711_dev* a711)
+{
+	int ret;
+
+	// power up
+	if (a711->regulator) {
+		if (regulator_is_enabled(a711->regulator)) {
+			// if the regulator is still enabled
+			dev_warn(a711->dev,
+				 "regulator was already enabled during powerup");
+		}
+
+		ret = regulator_enable(a711->regulator);
+		if (ret < 0) {
+			dev_err(a711->dev,
+				"can't enable power supply err=%d", ret);
+			return ret;
+		}
+	} else {
+		dev_err(a711->dev, "regulator required for eg25, none defined");
+		return -ENODEV;
+	}
+
+	// drive default gpio signals during powerup
+	gpiod_direction_output(a711->enable_gpio, 1);
+	gpiod_direction_output(a711->sleep_gpio, 0);
+	gpiod_direction_output(a711->reset_gpio, 0);
+	gpiod_direction_output(a711->pwrkey_gpio, 0);
+
+	// wait for powerup
+	msleep(100);
+
+	// send 200ms pwrkey pulse
+	gpiod_set_value(a711->pwrkey_gpio, 1);
+	msleep(200);
+	gpiod_set_value(a711->pwrkey_gpio, 0);
+
+	return 0;
+}
+
+static int a711_eg25_power_down(struct a711_dev* a711)
+{
+	// send 800ms pwrkey pulse
+	gpiod_set_value(a711->pwrkey_gpio, 1);
+	msleep(800);
+	gpiod_set_value(a711->pwrkey_gpio, 0);
+
+	// wait 30s for modem shutdown (usually shuts down in a few seconds)
+	msleep(30000);
+
+	// if it comes to powerdown we know we have a regulator configured
+	// so we don't handle the else branch
+	if (a711->regulator) {
+		regulator_disable(a711->regulator);
+		gpiod_direction_input(a711->enable_gpio);
+		gpiod_direction_input(a711->reset_gpio);
+		gpiod_direction_input(a711->sleep_gpio);
+		gpiod_direction_input(a711->pwrkey_gpio);
+	}
+
+	return 0;
+}
+
+static const struct a711_variant a711_eg25_variant = {
+	.power_init = a711_mg2723_power_init,
+	.power_up = a711_eg25_power_up,
+	.power_down = a711_eg25_power_down,
+	.reset = a711_generic_reset,
+	.reset_duration = 20,
+};
+
 static void a711_reset(struct a711_dev* a711)
 {
 	struct device *dev = a711->dev;
@@ -615,6 +688,8 @@ static void a711_shutdown(struct platform_device *pdev)
 static const struct of_device_id a711_of_match[] = {
 	{ .compatible = "custom,power-manager-mg3732",
 	  .data = &a711_mg2723_variant },
+	{ .compatible = "custom,power-manager-eg25",
+	  .data = &a711_eg25_variant },
 	{},
 };
 MODULE_DEVICE_TABLE(of, a711_of_match);
