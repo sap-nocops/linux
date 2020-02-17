@@ -24,6 +24,8 @@
 #define AXP20X_PWR_STATUS_ACIN_PRESENT	BIT(7)
 #define AXP20X_PWR_STATUS_ACIN_AVAIL	BIT(6)
 
+#define AXP813_ACIN_PATH_SEL		BIT(7)
+
 #define AXP813_VHOLD_MASK		GENMASK(5, 3)
 #define AXP813_VHOLD_UV_TO_BIT(x)	((((x) / 100000) - 40) << 3)
 #define AXP813_VHOLD_REG_TO_UV(x)	\
@@ -44,6 +46,7 @@ struct axp20x_ac_power {
 	struct iio_channel *acin_v;
 	struct iio_channel *acin_i;
 	unsigned int irqs[ACIN_IRQS];
+	bool has_acin_path_sel;
 };
 
 static irqreturn_t axp20x_ac_power_irq(int irq, void *devid)
@@ -90,6 +93,17 @@ static int axp20x_ac_power_get_property(struct power_supply *psy,
 			return ret;
 
 		val->intval = !!(reg & AXP20X_PWR_STATUS_ACIN_AVAIL);
+
+		/* ACIN_PATH_SEL disables ACIN even if ACIN_AVAIL is set. */
+		if (val->intval && power->has_acin_path_sel) {
+			ret = regmap_read(power->regmap, AXP813_ACIN_PATH_CTRL,
+					  &reg);
+			if (ret)
+				return ret;
+
+			val->intval = !!(reg & AXP813_ACIN_PATH_SEL);
+		}
+
 		return 0;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -228,21 +242,25 @@ static const struct power_supply_desc axp813_ac_power_desc = {
 struct axp_data {
 	const struct power_supply_desc	*power_desc;
 	bool				acin_adc;
+	bool				acin_path_sel;
 };
 
 static const struct axp_data axp20x_data = {
-	.power_desc = &axp20x_ac_power_desc,
-	.acin_adc = true,
+	.power_desc	= &axp20x_ac_power_desc,
+	.acin_adc	= true,
+	.acin_path_sel	= false,
 };
 
 static const struct axp_data axp22x_data = {
-	.power_desc = &axp22x_ac_power_desc,
-	.acin_adc = false,
+	.power_desc	= &axp22x_ac_power_desc,
+	.acin_adc	= false,
+	.acin_path_sel	= false,
 };
 
 static const struct axp_data axp813_data = {
-	.power_desc = &axp813_ac_power_desc,
-	.acin_adc = false,
+	.power_desc	= &axp813_ac_power_desc,
+	.acin_adc	= false,
+	.acin_path_sel	= true,
 };
 
 int axp20x_ac_power_suspend(struct device *dev)
@@ -325,6 +343,7 @@ static int axp20x_ac_power_probe(struct platform_device *pdev)
 	}
 
 	power->regmap = dev_get_regmap(pdev->dev.parent, NULL);
+	power->has_acin_path_sel = axp_data->acin_path_sel;
 
 	platform_set_drvdata(pdev, power);
 
