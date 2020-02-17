@@ -723,9 +723,9 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
         /* Headphones */
 
 	SND_SOC_DAPM_REGULATOR_SUPPLY("cpvdd", 0, 0),
-	SND_SOC_DAPM_MUX("Left Headphone Mux",
+	SND_SOC_DAPM_MUX("Left Headphone Source",
 			 SND_SOC_NOPM, 0, 0, ac100_codec_hp_src),
-	SND_SOC_DAPM_MUX("Right Headphone Mux",
+	SND_SOC_DAPM_MUX("Right Headphone Source",
 			 SND_SOC_NOPM, 0, 0, ac100_codec_hp_src),
 	SND_SOC_DAPM_SWITCH("Left Headphone Switch",
 			    SND_SOC_NOPM, 0, 0, &ac100_codec_hp_switch),
@@ -743,7 +743,7 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 
         /* Earpiece */
 
-	SND_SOC_DAPM_MUX("Earpiece Mux",
+	SND_SOC_DAPM_MUX("Earpiece Source Playback Route",
 			 SND_SOC_NOPM, 0, 0, ac100_codec_earpiece_src),
 	SND_SOC_DAPM_SWITCH("Earpiece",
 			    SND_SOC_NOPM, 0, 0, &ac100_codec_earpiece_switch),
@@ -753,9 +753,9 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 
 	/* Speaker */
 
-	SND_SOC_DAPM_MUX("Left Speaker Mux",
+	SND_SOC_DAPM_MUX("Left Speaker Source",
 			 SND_SOC_NOPM, 0, 0, ac100_codec_spk_src),
-	SND_SOC_DAPM_MUX("Right Speaker Mux",
+	SND_SOC_DAPM_MUX("Right Speaker Source",
 			 SND_SOC_NOPM, 0, 0, ac100_codec_spk_src),
 	SND_SOC_DAPM_SWITCH("Left Speaker Switch",
 			    SND_SOC_NOPM, 0, 0, &ac100_codec_spk_switch),
@@ -790,7 +790,7 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 
 	SND_SOC_DAPM_INPUT("MIC2"),
 	SND_SOC_DAPM_INPUT("MIC3"),
-	SND_SOC_DAPM_MUX("Mic2 Amplifier Mux",
+	SND_SOC_DAPM_MUX("Mic2 Amplifier Source",
 			 SND_SOC_NOPM, 0, 0, ac100_codec_mic2boost_src),
 	SND_SOC_DAPM_SUPPLY("HBIAS", AC100_ADC_APC_CTRL,
 			    AC100_ADC_APC_CTRL_HBIAS_EN_OFF,
@@ -828,9 +828,9 @@ static const struct snd_soc_dapm_widget ac100_codec_widgets[] = {
 static const struct snd_soc_dapm_route ac100_codec_routes[] = {
 	/* Microphone Routes */
 	{ "Mic1 Amplifier", NULL, "MIC1"},
-	{ "Mic2 Amplifier", NULL, "Mic2 Amplifier Mux"},
-	{ "Mic2 Amplifier Mux", "Mic2", "MIC2" },
-	{ "Mic2 Amplifier Mux", "Mic3", "MIC3" },
+	{ "Mic2 Amplifier", NULL, "Mic2 Amplifier Source"},
+	{ "Mic2 Amplifier Source", "Mic2", "MIC2" },
+	{ "Mic2 Amplifier Source", "Mic3", "MIC3" },
 
 	/* Mixer Routes */
 	{ "Left Mixer", "Mic1 Playback Switch", "Mic1 Amplifier" },
@@ -871,16 +871,16 @@ static const struct snd_soc_dapm_route ac100_codec_routes[] = {
 	{ "Right ADC", NULL, "Right ADC Mixer" },
 
 	/* Headphone Routes */
-	{ "Left Headphone Mux", "DAC", "Left DAC" },
-	{ "Left Headphone Mux", "Mixer", "Left Mixer" },
-	{ "Left Headphone Switch", "Headphone Playback Switch", "Left Headphone Mux" },
+	{ "Left Headphone Source", "DAC", "Left DAC" },
+	{ "Left Headphone Source", "Mixer", "Left Mixer" },
+	{ "Left Headphone Switch", "Headphone Playback Switch", "Left Headphone Source" },
 	{ "Left Headphone Amp", NULL, "Left Headphone Switch" },
 	{ "Left Headphone Amp", NULL, "Headphone Amp" },
 	{ "HP", NULL, "Left Headphone Amp" },
 
-	{ "Right Headphone Mux", "DAC", "Right DAC" },
-	{ "Right Headphone Mux", "Mixer", "Right Mixer" },
-	{ "Right Headphone Switch", "Headphone Playback Switch", "Right Headphone Mux" },
+	{ "Right Headphone Source", "DAC", "Right DAC" },
+	{ "Right Headphone Source", "Mixer", "Right Mixer" },
+	{ "Right Headphone Switch", "Headphone Playback Switch", "Right Headphone Source" },
 	{ "Right Headphone Amp", NULL, "Right Headphone Switch" },
 	{ "Right Headphone Amp", NULL, "Headphone Amp" },
 	{ "HP", NULL, "Right Headphone Amp" },
@@ -888,24 +888,24 @@ static const struct snd_soc_dapm_route ac100_codec_routes[] = {
 	{ "Headphone Amp", NULL, "cpvdd" },
 
 	/* Speaker Routes */
-	{ "Left Speaker Mux", "Stereo", "Left Mixer" },
-	{ "Left Speaker Mux", "Mono", "Right Mixer" },
-	{ "Left Speaker Mux", "Mono", "Left Mixer" },
-	{ "Left Speaker Switch", "Speaker Playback Switch", "Left Speaker Mux" },
+	{ "Left Speaker Source", "Stereo", "Left Mixer" },
+	{ "Left Speaker Source", "Mono", "Right Mixer" },
+	{ "Left Speaker Source", "Mono", "Left Mixer" },
+	{ "Left Speaker Switch", "Speaker Playback Switch", "Left Speaker Source" },
 	{ "SPKOUTL", NULL, "Left Speaker Switch" },
 
-	{ "Right Speaker Mux", "Stereo", "Right Mixer" },
-	{ "Right Speaker Mux", "Mono", "Right Mixer" },
-	{ "Right Speaker Mux", "Mono", "Left Mixer" },
-	{ "Right Speaker Switch", "Speaker Playback Switch", "Right Speaker Mux" },
+	{ "Right Speaker Source", "Stereo", "Right Mixer" },
+	{ "Right Speaker Source", "Mono", "Right Mixer" },
+	{ "Right Speaker Source", "Mono", "Left Mixer" },
+	{ "Right Speaker Switch", "Speaker Playback Switch", "Right Speaker Source" },
 	{ "SPKOUTR", NULL, "Right Speaker Switch" },
 
 	/* Earpiece Routes */
-	{ "Earpiece Mux", "DACR", "Right DAC" },
-	{ "Earpiece Mux", "DACL", "Left DAC" },
-	{ "Earpiece Mux", "Right Mixer", "Right Mixer" },
-	{ "Earpiece Mux", "Left Mixer", "Left Mixer" },
-	{ "Earpiece", "Playback Switch", "Earpiece Mux" },
+	{ "Earpiece Source Playback Route", "DACR", "Right DAC" },
+	{ "Earpiece Source Playback Route", "DACL", "Left DAC" },
+	{ "Earpiece Source Playback Route", "Right Mixer", "Right Mixer" },
+	{ "Earpiece Source Playback Route", "Left Mixer", "Left Mixer" },
+	{ "Earpiece", "Playback Switch", "Earpiece Source Playback Route" },
 	{ "Earpiece Amp", NULL, "Earpiece" },
 	{ "EARPIECE", NULL, "Earpiece Amp" },
 
