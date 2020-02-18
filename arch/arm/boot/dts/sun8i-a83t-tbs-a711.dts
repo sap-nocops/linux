@@ -620,8 +620,8 @@
 };
 
 &reg_dldo3 {
-	regulator-min-microvolt = <2600000>;
-	regulator-max-microvolt = <2600000>;
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
 	regulator-name = "vdd-csi";
 };
 
