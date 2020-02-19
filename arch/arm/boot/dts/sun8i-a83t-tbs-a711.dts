@@ -448,9 +448,9 @@
 	brcmf: wifi@1 {
 		reg = <1>;
 		compatible = "brcm,bcm4329-fmac";
-		interrupt-parent = <&r_pio>;
-		interrupts = <0 3 IRQ_TYPE_LEVEL_LOW>; /* PL3 WL_WAKE_UP */
-		interrupt-names = "host-wake";
+//		interrupt-parent = <&r_pio>;
+//		interrupts = <0 3 IRQ_TYPE_LEVEL_HIGH>; /* PL3 WL_WAKE_UP */
+//		interrupt-names = "host-wake";
 	};
 };
 
@@ -500,6 +500,7 @@
 		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
 		swin-supply = <&reg_dcdc1>;
 		x-powers,drive-vbus-en;
+		x-powers,vbus-acin-shorted;
 	};
 
 	ac100: codec@e89 {
@@ -620,8 +621,8 @@
 };
 
 &reg_dldo3 {
-	regulator-min-microvolt = <2600000>;
-	regulator-max-microvolt = <2600000>;
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
 	regulator-name = "vdd-csi";
 };
 
@@ -740,13 +741,12 @@
 };
 
 &usb_otg {
-	dr_mode = "otg";
 	status = "okay";
 };
 
 &usbphy {
-	usb0_id_det-gpios = <&pio 7 11 GPIO_ACTIVE_HIGH>; /* PH11 */
-	force-poll-vbus-id-det;
+	usb0_id_det-gpios = <&pio 7 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>; /* PH11 */
+	usb0_vbus_power-supply = <&usb_power_supply>;
 	usb0_vbus-supply = <&reg_drivevbus>;
 	usb1_vbus-supply = <&reg_vmain>;
 	usb2_vbus-supply = <&reg_vmain>;
