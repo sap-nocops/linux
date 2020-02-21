@@ -1973,6 +1973,8 @@ static int hm5065_s_power(struct v4l2_subdev *sd, int on)
 	if (!ret && power_up) {
 		/* restore controls */
 		ret = v4l2_ctrl_handler_setup(&sensor->ctrls.handler);
+		if (ret)
+			hm5065_s_power(sd, 0);
 	}
 
 	return ret;
