@@ -330,6 +330,30 @@ static void txstate(struct musb *musb, struct musb_request *req)
 			}
 		}
 
+		if (musb_dma_sunxi(musb)) {
+			if (use_dma) {
+				csr |= MUSB_TXCSR_AUTOSET | MUSB_TXCSR_DMAENAB |
+				       MUSB_TXCSR_DMAMODE |
+				       BIT(13) /* USBC_BP_TXCSR_D_MODE */;
+				musb_writew(epio, MUSB_TXCSR, csr | MUSB_TXCSR_P_WZC_BITS);
+
+				csr = musb_readw(epio, MUSB_TXCSR);
+			}
+
+			use_dma = use_dma && c->channel_program(musb_ep->dma,
+					musb_ep->packet_sz,
+					0,
+					request->dma + request->actual,
+					request_size);
+			if (!use_dma) {
+				csr &= ~(MUSB_TXCSR_DMAENAB | MUSB_TXCSR_AUTOSET);
+				musb_writew(epio, MUSB_TXCSR, csr | MUSB_TXCSR_P_WZC_BITS);
+
+				csr &= ~(MUSB_TXCSR_DMAMODE);
+				musb_writew(epio, MUSB_TXCSR, csr | MUSB_TXCSR_P_WZC_BITS);
+			}
+		}
+
 		if (is_cppi_enabled(musb)) {
 			/* program endpoint CSR first, then setup DMA */
 			csr &= ~(MUSB_TXCSR_P_UNDERRUN | MUSB_TXCSR_TXPKTRDY);
@@ -452,7 +476,6 @@ void musb_g_tx(struct musb *musb, u8 epnum)
 	}
 
 	if (req) {
-
 		trace_musb_req_tx(req);
 
 		if (dma && (csr & MUSB_TXCSR_DMAENAB)) {
@@ -460,6 +483,7 @@ void musb_g_tx(struct musb *musb, u8 epnum)
 			csr &= ~(MUSB_TXCSR_DMAENAB | MUSB_TXCSR_P_UNDERRUN |
 				 MUSB_TXCSR_TXPKTRDY | MUSB_TXCSR_AUTOSET);
 			musb_writew(epio, MUSB_TXCSR, csr);
+
 			/* Ensure writebuffer is empty. */
 			csr = musb_readw(epio, MUSB_TXCSR);
 			request->actual += musb_ep->dma->actual_len;

@@ -79,6 +79,12 @@ struct musb_hw_ep;
 #define musb_dma_inventra(musb)		0
 #endif
 
+#ifdef CONFIG_USB_SUNXI_DMA
+#define musb_dma_sunxi(musb)		(musb->ops->quirks & MUSB_DMA_SUNXI)
+#else
+#define musb_dma_sunxi(musb)		0
+#endif
+
 #if defined(CONFIG_USB_TI_CPPI_DMA) || defined(CONFIG_USB_TI_CPPI41_DMA)
 #define	is_cppi_enabled(musb)		\
 	(musb_dma_cppi(musb) || musb_dma_cppi41(musb))
@@ -216,5 +222,10 @@ extern void cppi41_dma_controller_destroy(struct dma_controller *c);
 extern struct dma_controller *
 ux500_dma_controller_create(struct musb *musb, void __iomem *base);
 extern void ux500_dma_controller_destroy(struct dma_controller *c);
+
+extern struct dma_controller *
+sunxi_dma_controller_create(struct musb *musb, void __iomem *base);
+extern void sunxi_dma_controller_destroy(struct dma_controller *c);
+extern void sunxi_musb_dma_interrupt(struct musb* musb);
 
 #endif	/* __MUSB_DMA_H__ */

@@ -24,6 +24,7 @@
 #include <linux/usb/usb_phy_generic.h>
 #include <linux/workqueue.h>
 #include "musb_core.h"
+#include "musb_trace.h"
 
 /*
  * Register offsets, note sunxi musb has a different layout then most
@@ -189,6 +190,10 @@ static irqreturn_t sunxi_musb_interrupt(int irq, void *__hci)
 	if (musb->int_rx)
 		writew(musb->int_rx, musb->mregs + SUNXI_MUSB_INTRRX);
 
+#ifdef CONFIG_USB_SUNXI_DMA
+	sunxi_musb_dma_interrupt(musb);
+#endif
+
 	musb_interrupt(musb);
 
 	spin_unlock_irqrestore(&musb->lock, flags);
@@ -311,6 +316,7 @@ static void sunxi_musb_disable(struct musb *musb)
 	clear_bit(SUNXI_MUSB_FL_ENABLED, &glue->flags);
 }
 
+#ifndef CONFIG_USB_SUNXI_DMA
 static struct dma_controller *
 sunxi_musb_dma_controller_create(struct musb *musb, void __iomem *base)
 {
@@ -320,6 +326,7 @@ sunxi_musb_dma_controller_create(struct musb *musb, void __iomem *base)
 static void sunxi_musb_dma_controller_destroy(struct dma_controller *c)
 {
 }
+#endif
 
 static int sunxi_musb_set_mode(struct musb *musb, u8 mode)
 {
@@ -451,7 +458,7 @@ static u8 sunxi_musb_readb(void __iomem *addr, u32 offset)
 			return readb(addr + offset);
 		default:
 			dev_err(sunxi_musb->controller->parent,
-				"Error unknown readb offset %u\n", offset);
+				"Error unknown readb offset 0x%x\n", offset);
 			return 0;
 		}
 	} else if (addr == (sunxi_musb->mregs + 0x80)) {
@@ -505,7 +512,7 @@ static void sunxi_musb_writeb(void __iomem *addr, unsigned offset, u8 data)
 			return writeb(data, addr + offset);
 		default:
 			dev_err(sunxi_musb->controller->parent,
-				"Error unknown writeb offset %u\n", offset);
+				"Error unknown writeb offset 0x%x\n", offset);
 			return;
 		}
 	} else if (addr == (sunxi_musb->mregs + 0x80)) {
@@ -523,6 +530,13 @@ static void sunxi_musb_writeb(void __iomem *addr, unsigned offset, u8 data)
 static u16 sunxi_musb_readw(void __iomem *addr, u32 offset)
 {
 	if (addr == sunxi_musb->mregs) {
+		/* DMA range */
+		if (offset >= 0x0500 && offset < 0x548 + 0x10 * 8) {
+			u16 data = readw(addr + offset);
+			trace_musb_readw(__builtin_return_address(0), addr, offset, data);
+			return data;
+		}
+
 		/* generic control or fifo control reg access */
 		switch (offset) {
 		case MUSB_INTRTX:
@@ -543,12 +557,14 @@ static u16 sunxi_musb_readw(void __iomem *addr, u32 offset)
 			return 0; /* sunxi musb version is not known */
 		default:
 			dev_err(sunxi_musb->controller->parent,
-				"Error unknown readw offset %u\n", offset);
+				"Error unknown readw offset 0x%x\n", offset);
 			return 0;
 		}
 	} else if (addr == (sunxi_musb->mregs + 0x80)) {
 		/* ep control reg access */
-		return readw(addr + offset);
+		u16 data = readw(addr + offset);
+		trace_musb_readw(__builtin_return_address(0), addr, offset, data);
+		return data;
 	}
 
 	dev_err(sunxi_musb->controller->parent,
@@ -559,7 +575,13 @@ static u16 sunxi_musb_readw(void __iomem *addr, u32 offset)
 
 static void sunxi_musb_writew(void __iomem *addr, unsigned offset, u16 data)
 {
+	trace_musb_writew(__builtin_return_address(0), addr, offset, data);
+
 	if (addr == sunxi_musb->mregs) {
+		/* DMA range */
+		if (offset >= 0x0500 && offset < 0x548 + 0x10 * 8)
+			return writew(data, addr + offset);
+
 		/* generic control or fifo control reg access */
 		switch (offset) {
 		case MUSB_INTRTX:
@@ -578,7 +600,7 @@ static void sunxi_musb_writew(void __iomem *addr, unsigned offset, u16 data)
 			return writew(data, addr + SUNXI_MUSB_RXFIFOADD);
 		default:
 			dev_err(sunxi_musb->controller->parent,
-				"Error unknown writew offset %u\n", offset);
+				"Error unknown writew offset 0x%x\n", offset);
 			return;
 		}
 	} else if (addr == (sunxi_musb->mregs + 0x80)) {
@@ -592,9 +614,17 @@ static void sunxi_musb_writew(void __iomem *addr, unsigned offset, u16 data)
 }
 
 static const struct musb_platform_ops sunxi_musb_ops = {
-	.quirks		= MUSB_INDEXED_EP,
 	.init		= sunxi_musb_init,
 	.exit		= sunxi_musb_exit,
+#ifdef CONFIG_USB_SUNXI_DMA
+	.quirks		= MUSB_INDEXED_EP | MUSB_DMA_SUNXI,
+	.dma_init	= sunxi_dma_controller_create,
+	.dma_exit	= sunxi_dma_controller_destroy,
+#else
+	.quirks		= MUSB_INDEXED_EP,
+	.dma_init	= sunxi_musb_dma_controller_create,
+	.dma_exit	= sunxi_musb_dma_controller_destroy,
+#endif
 	.enable		= sunxi_musb_enable,
 	.disable	= sunxi_musb_disable,
 	.fifo_offset	= sunxi_musb_fifo_offset,
@@ -604,8 +634,6 @@ static const struct musb_platform_ops sunxi_musb_ops = {
 	.writeb		= sunxi_musb_writeb,
 	.readw		= sunxi_musb_readw,
 	.writew		= sunxi_musb_writew,
-	.dma_init	= sunxi_musb_dma_controller_create,
-	.dma_exit	= sunxi_musb_dma_controller_destroy,
 	.set_mode	= sunxi_musb_set_mode,
 	.recover	= sunxi_musb_recover,
 	.set_vbus	= sunxi_musb_set_vbus,

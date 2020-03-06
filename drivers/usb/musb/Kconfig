@@ -144,6 +144,12 @@ config USB_UX500_DMA
 	help
 	  Enable DMA transfers on UX500 platforms.
 
+config USB_SUNXI_DMA
+	bool 'Allwinner DMA'
+	depends on USB_MUSB_SUNXI
+	help
+	  Enable DMA transfers on Allwinner platforms.
+
 config USB_INVENTRA_DMA
 	bool 'Inventra'
 	depends on USB_MUSB_OMAP2PLUS || USB_MUSB_MEDIATEK || USB_MUSB_JZ4740
