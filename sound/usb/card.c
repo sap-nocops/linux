@@ -218,11 +218,24 @@ static int snd_usb_create_streams(struct snd_usb_audio *chip, int ctrlif)
 	struct usb_device *dev = chip->dev;
 	struct usb_host_interface *host_iface;
 	struct usb_interface_descriptor *altsd;
+	struct usb_interface *usb_iface;
 	void *control_header;
 	int i, protocol;
 
+	usb_iface = usb_ifnum_to_if(dev, ctrlif);
+	if (!usb_iface) {
+		snd_printk(KERN_ERR "%d:%u : does not exist\n",
+					dev->devnum, ctrlif);
+		return -EINVAL;
+	}
+
 	/* find audiocontrol interface */
-	host_iface = &usb_ifnum_to_if(dev, ctrlif)->altsetting[0];
+	host_iface = &usb_iface->altsetting[0];
+	if (!host_iface) {
+		snd_printk(KERN_ERR "Audio Control interface is not available.");
+		return -EINVAL;
+	}
+
 	control_header = snd_usb_find_csint_desc(host_iface->extra,
 						 host_iface->extralen,
 						 NULL, UAC_HEADER);
@@ -262,8 +275,7 @@ static int snd_usb_create_streams(struct snd_usb_audio *chip, int ctrlif)
 
 	case UAC_VERSION_2: {
 		struct usb_interface_assoc_descriptor *assoc =
-			usb_ifnum_to_if(dev, ctrlif)->intf_assoc;
-
+						usb_iface->intf_assoc;
 		if (!assoc) {
 			/*
 			 * Firmware writers cannot count to three.  So to find
@@ -568,6 +580,7 @@ snd_usb_audio_probe(struct usb_device *dev,
 	usb_chip[chip->index] = chip;
 	chip->num_interfaces++;
 	chip->probing = 0;
+	intf->needs_remote_wakeup = 1;
 	mutex_unlock(&register_mutex);
 	return chip;
 
@@ -590,6 +603,7 @@ static void snd_usb_audio_disconnect(struct usb_device *dev,
 				     struct snd_usb_audio *chip)
 {
 	struct snd_card *card;
+	struct usb_mixer_interface *mixer;
 	struct list_head *p;
 	bool was_shutdown;
 
@@ -621,7 +635,8 @@ static void snd_usb_audio_disconnect(struct usb_device *dev,
 		}
 		/* release mixer resources */
 		list_for_each(p, &chip->mixer_list) {
-			snd_usb_mixer_disconnect(p);
+			mixer = list_entry(p, struct usb_mixer_interface, list);
+			snd_usb_mixer_disconnect(mixer);
 		}
 	}
 
@@ -645,6 +660,7 @@ static int usb_audio_probe(struct usb_interface *intf,
 	chip = snd_usb_audio_probe(interface_to_usbdev(intf), intf, id);
 	if (chip) {
 		usb_set_intfdata(intf, chip);
+		usb_enable_autosuspend(chip->dev);
 		return 0;
 	} else
 		return -EIO;
@@ -663,7 +679,7 @@ int snd_usb_autoresume(struct snd_usb_audio *chip)
 	int err = -ENODEV;
 
 	down_read(&chip->shutdown_rwsem);
-	if (chip->probing && chip->in_pm)
+	if (chip->probing || chip->in_pm)
 		err = 0;
 	else if (!chip->shutdown)
 		err = usb_autopm_get_interface(chip->pm_intf);

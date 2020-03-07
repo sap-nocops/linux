@@ -135,7 +135,7 @@ void trim_init_extable(struct module *m);
 #ifdef MODULE
 /* Creates an alias so file2alias.c can find device table. */
 #define MODULE_DEVICE_TABLE(type, name)					\
-  extern const struct type##_device_id __mod_##type##__##name##_device_table \
+extern const typeof(name) __mod_##type##__##name##_device_table		\
   __attribute__ ((unused, alias(__stringify(name))))
 #else  /* !MODULE */
 #define MODULE_DEVICE_TABLE(type, name)
@@ -276,6 +276,8 @@ struct module {
 	/* Signature was verified. */
 	bool sig_ok;
 #endif
+
+	bool async_probe_requested;
 
 	/* symbols that will be GPL-only in the near future. */
 	const struct kernel_symbol *gpl_future_syms;
@@ -517,6 +519,11 @@ int unregister_module_notifier(struct notifier_block *nb);
 
 extern void print_modules(void);
 
+static inline bool module_requested_async_probing(struct module *module)
+{
+	return module && module->async_probe_requested;
+}
+
 #else /* !CONFIG_MODULES... */
 
 /* Given an address, look for it in the exception tables. */
@@ -627,6 +634,12 @@ static inline int unregister_module_notifier(struct notifier_block *nb)
 static inline void print_modules(void)
 {
 }
+
+static inline bool module_requested_async_probing(struct module *module)
+{
+	return false;
+}
+
 #endif /* CONFIG_MODULES */
 
 #ifdef CONFIG_SYSFS
