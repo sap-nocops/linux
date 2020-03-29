@@ -7507,6 +7507,12 @@ S:	Supported
 F:	Documentation/scsi/hptiop.txt
 F:	drivers/scsi/hptiop.c
 
+HIMAX HM5065 SENSOR DRIVER
+M:	Ondrej Jirman <kernel@xff.cz>
+L:	linux-media@vger.kernel.org
+S:	Supported
+F:	drivers/media/i2c/hm5065.c
+
 HIPPI
 M:	Jes Sorensen <jes@trained-monkey.org>
 L:	linux-hippi@sunsite.dk
@@ -14362,6 +14368,14 @@ S:	Maintained
 F:	include/net/rose.h
 F:	include/uapi/linux/rose.h
 F:	net/rose/
+
+ROTATION DRIVER FOR ALLWINNER A83T
+M:	Jernej Skrabec <jernej.skrabec@siol.net>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+S:	Maintained
+F:	drivers/media/platform/sunxi/sun8i-rot/
+F:	Documentation/devicetree/bindings/media/allwinner,sun8i-a83t-rotate.yaml
 
 RTL2830 MEDIA DRIVER
 M:	Antti Palosaari <crope@iki.fi>
