@@ -667,6 +667,7 @@ static SIMPLE_DEV_PM_OPS(stk3310_pm_ops, stk3310_suspend, stk3310_resume);
 static const struct i2c_device_id stk3310_i2c_id[] = {
 	{"STK3310", 0},
 	{"STK3311", 0},
+	{"STK3311-X", 0},
 	{"STK3335", 0},
 	{}
 };
@@ -675,6 +676,7 @@ MODULE_DEVICE_TABLE(i2c, stk3310_i2c_id);
 static const struct acpi_device_id stk3310_acpi_id[] = {
 	{"STK3310", 0},
 	{"STK3311", 0},
+	{"STK3311-X", 0},
 	{"STK3335", 0},
 	{}
 };
@@ -684,6 +686,7 @@ MODULE_DEVICE_TABLE(acpi, stk3310_acpi_id);
 static const struct of_device_id stk3310_of_match[] = {
 	{ .compatible = "sensortek,stk3310", },
 	{ .compatible = "sensortek,stk3311", },
+	{ .compatible = "sensortek,stk3311-x", },
 	{ .compatible = "sensortek,stk3335", },
 	{}
 };
