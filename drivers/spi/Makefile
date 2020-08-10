@@ -8,7 +8,8 @@ ccflags-$(CONFIG_SPI_DEBUG) := -DDEBUG
 # config declarations into driver model code
 obj-$(CONFIG_SPI_MASTER)		+= spi.o
 obj-$(CONFIG_SPI_SPIDEV)		+= spidev.o
-
+#will.shao, for quectel spi multi channel
+obj-$(CONFIG_QUECTEL_SPI_MULTI_CHN)	+= quec_spi_chn.o
 # SPI master controller drivers (bus)
 obj-$(CONFIG_SPI_ALTERA)		+= spi-altera.o
 obj-$(CONFIG_SPI_ATMEL)			+= spi-atmel.o
@@ -85,3 +86,5 @@ obj-$(CONFIG_SPI_TXX9)			+= spi-txx9.o
 obj-$(CONFIG_SPI_XCOMM)		+= spi-xcomm.o
 obj-$(CONFIG_SPI_XILINX)		+= spi-xilinx.o
 obj-$(CONFIG_SPI_XTENSA_XTFPGA)		+= spi-xtensa-xtfpga.o
+obj-$(CONFIG_SPI_QSD)			+= spi_qsd.o
+obj-$(CONFIG_SPI_QUP)			+= spi_qsd.o

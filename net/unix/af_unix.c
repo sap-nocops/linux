@@ -1027,6 +1027,8 @@ static int unix_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 		struct path u_path;
 		umode_t mode = S_IFSOCK |
 		       (SOCK_INODE(sock)->i_mode & ~current_umask());
+		u_path.dentry = NULL;
+		u_path.mnt = NULL;
 		err = unix_mknod(dentry, &path, mode, &u_path);
 		if (err) {
 			if (err == -EEXIST)
@@ -1736,7 +1738,12 @@ restart_locked:
 			goto out_unlock;
 	}
 
-	if (unlikely(unix_peer(other) != sk && unix_recvq_full(other))) {
+	/* other == sk && unix_peer(other) != sk if
+	 * - unix_peer(sk) == NULL, destination address bound to sk
+	 * - unix_peer(sk) == sk by time of get but disconnected before lock
+	 */
+	if (other != sk &&
+	    unlikely(unix_peer(other) != sk && unix_recvq_full(other))) {
 		if (timeo) {
 			timeo = unix_wait_for_peer(other, timeo);
 

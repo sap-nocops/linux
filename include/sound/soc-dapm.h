@@ -308,6 +308,11 @@ struct device;
 	.get = snd_soc_dapm_get_pin_switch, \
 	.put = snd_soc_dapm_put_pin_switch, \
 	.private_value = (unsigned long)xname }
+#define SND_SOC_DAPM_MICBIAS_E(wname, wreg, wshift, winvert, wevent, wflags) \
+{	.id = snd_soc_dapm_micbias, .name = wname, \
+	SND_SOC_DAPM_INIT_REG_VAL(wreg, wshift, winvert), \
+	.kcontrol_news = NULL, .num_kcontrols = 0, \
+	.event = wevent, .event_flags = wflags}
 
 /* dapm stream operations */
 #define SND_SOC_DAPM_STREAM_NOP			0x0
@@ -444,6 +449,8 @@ int snd_soc_dapm_dai_get_connected_widgets(struct snd_soc_dai *dai, int stream,
 struct snd_soc_codec *snd_soc_dapm_kcontrol_codec(struct snd_kcontrol *kcontrol);
 struct snd_soc_dapm_context *snd_soc_dapm_kcontrol_dapm(
 	struct snd_kcontrol *kcontrol);
+struct snd_soc_dapm_widget_list *dapm_kcontrol_get_wlist(
+	const struct snd_kcontrol *kcontrol);
 
 /* dapm widget types */
 enum snd_soc_dapm_type {
@@ -505,7 +512,9 @@ struct snd_soc_dapm_path {
 	/* source (input) and sink (output) widgets */
 	struct snd_soc_dapm_widget *source;
 	struct snd_soc_dapm_widget *sink;
-
+	//yang add 2017-12-18
+	struct snd_kcontrol *kcontrol;
+	//yang add 2017-12-18
 	/* status */
 	u32 connect:1;	/* source and sink widgets are connected */
 	u32 walked:1;	/* path has been walked */
@@ -623,3 +632,4 @@ struct snd_soc_dapm_stats {
 };
 
 #endif
+
