@@ -178,6 +178,7 @@ enum {
         MPWR_F_GOT_PDN,
 	/* config options */
         MPWR_F_DUMB_POWERUP,
+        MPWR_F_FASTBOOT_POWERUP,
 	/* file */
 	MPWR_F_OPEN,
 	MPWR_F_OVERFLOW,
@@ -287,6 +288,8 @@ struct mpwr_eg25_qcfg {
 	bool (*is_ok)(const char* val);
 };
 
+#define EG25G_LATEST_KNOWN_FIRMWARE "EG25GGBR07A08M2G_01.002.07"
+
 static const struct mpwr_eg25_qcfg mpwr_eg25_qcfgs[] = {
 	//{ "risignaltype",       "\"respective\"", },
 	{ "risignaltype",       "\"physical\"", },
@@ -314,7 +317,7 @@ static const struct mpwr_eg25_qcfg mpwr_eg25_qcfgs[] = {
 	{ "airplanecontrol",    "1",   mpwr_eg25_qcfg_airplanecontrol_is_ok },
 
 	// available since firmware R07A08_01.002.01.002
-	{ "fast/poweroff", "1" },
+	{ "fast/poweroff", 	"1" },
 };
 
 static char* mpwr_serdev_get_response_value(struct mpwr_dev *mpwr,
@@ -384,10 +387,12 @@ static int mpwr_eg25_power_up(struct mpwr_dev* mpwr)
 {
 	struct gpio_desc *pwrkey_gpio = mpwr_eg25_get_pwrkey_gpio(mpwr);
 	bool wakeup_ok, status_ok;
-	bool needs_restart = false;
+	bool needs_restart = false, fastboot;
 	u32 speed = 115200;
 	int ret, i, off;
 	ktime_t start;
+
+	fastboot = test_and_clear_bit(MPWR_F_FASTBOOT_POWERUP, mpwr->flags);
 
 	if (regulator_is_enabled(mpwr->regulator))
 		dev_warn(mpwr->dev,
@@ -403,7 +408,14 @@ static int mpwr_eg25_power_up(struct mpwr_dev* mpwr)
 
 	/* Drive default gpio signals during powerup */
 	gpiod_direction_output(mpwr->host_ready_gpio, 1);
-	gpiod_direction_output(mpwr->enable_gpio, 1);
+	/* #W_DISABLE must be left pulled up during modem power up
+	 * early on, because opensource bootloader uses this signal to enter
+	 * fastboot mode when it's pulled down.
+	 *
+	 * This should be 1 for normal powerup and 0 for fastboot mode with
+	 * special Biktor's firmware.
+	 */
+	gpiod_direction_output(mpwr->enable_gpio, !fastboot);
 	gpiod_direction_output(mpwr->sleep_gpio, 0);
 	gpiod_direction_output(mpwr->reset_gpio, 0);
 	gpiod_direction_output(pwrkey_gpio, 0);
@@ -416,6 +428,10 @@ static int mpwr_eg25_power_up(struct mpwr_dev* mpwr)
 	gpiod_set_value(pwrkey_gpio, 1);
 	msleep(200);
 	gpiod_set_value(pwrkey_gpio, 0);
+
+	/* skip modem killswitch status checks in fastboot bootloader entry mode */
+	if (fastboot)
+		goto open_serdev;
 
 	/* Switch status key to input, in case it's multiplexed with pwrkey. */
 	gpiod_direction_input(mpwr->status_gpio);
@@ -462,6 +478,7 @@ static int mpwr_eg25_power_up(struct mpwr_dev* mpwr)
 	if (test_and_clear_bit(MPWR_F_KILLSWITCHED, mpwr->flags))
 		sysfs_notify(&mpwr->dev->kobj, NULL, "killswitched");
 
+open_serdev:
 	/* open serial console */
 	ret = serdev_device_open(mpwr->serdev);
 	if (ret) {
@@ -478,7 +495,7 @@ static int mpwr_eg25_power_up(struct mpwr_dev* mpwr)
 		goto err_shutdown;
 	}
 
-	if (test_bit(MPWR_F_DUMB_POWERUP, mpwr->flags))
+	if (test_bit(MPWR_F_DUMB_POWERUP, mpwr->flags) || fastboot)
 		goto powered_up;
 
 	ret = mpwr_serdev_at_cmd_with_retry_ignore_timeout(mpwr, "AT&FE0", 1000, 30);
@@ -488,10 +505,19 @@ static int mpwr_eg25_power_up(struct mpwr_dev* mpwr)
 	/* print firmware version */
         ret = mpwr_serdev_at_cmd_with_retry(mpwr, "AT+QVERSION;+QSUBSYSVER", 1000, 15);
         if (ret == 0 && mpwr->msg_len > 0) {
+		bool outdated = false;
+
 		dev_info(mpwr->dev, "===================================================\n");
-		for (off = 0; off < mpwr->msg_len; off += strlen(mpwr->msg + off) + 1)
+		for (off = 0; off < mpwr->msg_len; off += strlen(mpwr->msg + off) + 1) {
+			if (strstr(mpwr->msg + off, "Project Rev") && !strstr(mpwr->msg + off, EG25G_LATEST_KNOWN_FIRMWARE))
+				outdated = true;
+
 			dev_info(mpwr->dev, "%s\n", mpwr->msg + off);
+		}
 		dev_info(mpwr->dev, "===================================================\n");
+
+		if (outdated)
+			dev_warn(mpwr->dev, "Your modem has an outdated firmware. Latest know version is %s. Consider updating.\n", EG25G_LATEST_KNOWN_FIRMWARE);
 	}
 
 	/* print ADB key to dmesg */
@@ -573,8 +599,13 @@ static int mpwr_eg25_power_up(struct mpwr_dev* mpwr)
 
 	/* setup URC port */
 	ret = mpwr_serdev_at_cmd(mpwr, "AT+QURCCFG=\"urcport\",\"all\"", 2000);
-        if (ret)
-		dev_err(mpwr->dev, "Modem may not report URCs to the right port!\n");
+        if (ret) {
+		dev_info(mpwr->dev, "Your modem doesn't support AT+QURCCFG=\"urcport\",\"all\", consider upgrading the firmware.\n");
+
+		ret = mpwr_serdev_at_cmd(mpwr, "AT+QURCCFG=\"urcport\",\"usbat\"", 2000);
+		if (ret)
+			dev_err(mpwr->dev, "Modem may not report URCs to the right port!\n");
+	}
 
 	/* enable the modem to go to sleep when DTR is low */
 	ret = mpwr_serdev_at_cmd(mpwr, "AT+QSCLK=1", 2000);
@@ -1214,6 +1245,36 @@ static ssize_t dumb_powerup_store(struct device *dev,
 	return len;
 }
 
+static ssize_t fastboot_powerup_show(struct device *dev,
+				     struct device_attribute *attr, char *buf)
+{
+	struct mpwr_dev *mpwr = platform_get_drvdata(to_platform_device(dev));
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n",
+			 !!test_bit(MPWR_F_FASTBOOT_POWERUP, mpwr->flags));
+}
+
+static ssize_t fastboot_powerup_store(struct device *dev,
+				      struct device_attribute *attr,
+				      const char *buf, size_t len)
+{
+	struct mpwr_dev *mpwr = platform_get_drvdata(to_platform_device(dev));
+	bool val;
+	int ret;
+
+	ret = kstrtobool(buf, &val);
+	if (ret)
+		return ret;
+
+	if (val) {
+		dev_warn(mpwr->dev, "Fastboot powerup needs a special bootloader!\n");
+		set_bit(MPWR_F_FASTBOOT_POWERUP, mpwr->flags);
+	} else
+		clear_bit(MPWR_F_FASTBOOT_POWERUP, mpwr->flags);
+
+	return len;
+}
+
 static ssize_t killswitched_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
@@ -1252,6 +1313,7 @@ static ssize_t hard_reset_store(struct device *dev,
 static DEVICE_ATTR_RW(powered);
 static DEVICE_ATTR_WO(powered_blocking);
 static DEVICE_ATTR_RW(dumb_powerup);
+static DEVICE_ATTR_RW(fastboot_powerup);
 static DEVICE_ATTR_RO(killswitched);
 static DEVICE_ATTR_RO(is_busy);
 static DEVICE_ATTR_WO(hard_reset);
@@ -1260,6 +1322,7 @@ static struct attribute *mpwr_attrs[] = {
 	&dev_attr_powered.attr,
 	&dev_attr_powered_blocking.attr,
 	&dev_attr_dumb_powerup.attr,
+	&dev_attr_fastboot_powerup.attr,
 	&dev_attr_killswitched.attr,
 	&dev_attr_is_busy.attr,
 	&dev_attr_hard_reset.attr,
