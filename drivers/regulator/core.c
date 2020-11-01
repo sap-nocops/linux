@@ -1169,6 +1169,9 @@ static int machine_constraints_voltage(struct regulator_dev *rdev,
 		}
 
 		if (current_uV < 0) {
+			if (current_uV == -EINVAL && rdev->supply_name)
+				return -EPROBE_DEFER;
+
 			rdev_err(rdev,
 				 "failed to get the current voltage: %pe\n",
 				 ERR_PTR(current_uV));
