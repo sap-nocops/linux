@@ -4,8 +4,11 @@
  */
 
 /dts-v1/;
+#include <dt-bindings/usb/pd.h>
 #include "rk3399.dtsi"
 #include "rk3399-opp.dtsi"
+
+#define WITHOUT_CDN_DP // TODO: everything works, but it is simpler to test mipi
 
 / {
 	model = "Pine64 PinePhonePro";
@@ -75,6 +78,24 @@
 		regulator-always-on;
 		regulator-boot-on;
 		vin-supply = <&vcc_sysin>;
+
+		regulator-state-mem {
+			regulator-on-in-suspend;
+		};
+	};
+
+	vcc5v0_typec: vcc5v0-typec-regulator {
+		compatible = "regulator-fixed";
+		//enable-active-high;
+		gpio = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc5v0_typec_en>;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-name = "vcc5v0_typec";
+		vin-supply = <&vcc5v0_sys>;
+		regulator-always-on;
+		regulator-boot-on;
 
 		regulator-state-mem {
 			regulator-on-in-suspend;
@@ -177,6 +198,13 @@
 	cpu-supply = <&vdd_cpu_b>;
 	status = "disabled";
 };
+
+#ifndef WITHOUT_CDN_DP
+&cdn_dp {
+	status = "okay";
+	extcon = <&fusb0>;
+};
+#endif
 
 &emmc_phy {
 	status = "okay";
@@ -384,6 +412,10 @@
 
 			otg_switch: OTG_SWITCH {
 				regulator-name = "otg_switch";
+				// TODO: This requires a proper rk818-charger implementation
+				// without this always-on the type-c is not powered on
+				regulator-always-on;
+				regulator-boot-on;
 			};
 		};
 	};
@@ -449,8 +481,56 @@
 		interrupts = <RK_PA2 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&fusb0_int>;
-		vbus-supply = <&vcc5v0_sys>;
+		vbus-supply = <&vcc5v0_typec>;
 		status = "okay";
+
+		connector {
+			compatible = "usb-c-connector";
+			data-role = "dual";
+			label = "USB-C";
+			op-sink-microwatt = <1000000>;
+			power-role = "dual";
+			sink-pdos =
+				<PDO_FIXED(5000, 2500, PDO_FIXED_USB_COMM)>;
+			source-pdos =
+				<PDO_FIXED(5000, 1400, PDO_FIXED_USB_COMM)>;
+			try-power-role = "sink";
+
+			extcon-cables = <1 2 5 6 9 10 12 44>;
+			typec-altmodes = <0xff01 1 0x001c0c00 1>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					usbc_hs: endpoint {
+						remote-endpoint =
+							<&u2phy0_typec_hs>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					usbc_ss: endpoint {
+						remote-endpoint =
+							<&tcphy0_typec_ss>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+
+					usbc_dp: endpoint {
+						remote-endpoint =
+							<&tcphy0_typec_dp>;
+					};
+				};
+			};
+		};
 	};
 };
 
@@ -560,13 +640,7 @@
 
 	usb-typec {
 		vcc5v0_typec_en: vcc5v0_typec_en {
-			rockchip,pins = <1 RK_PA3 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
-	};
-
-	usb2 {
-		vcc5v0_host_en: vcc5v0-host-en {
-			rockchip,pins = <4 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>;
+			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 
@@ -635,6 +709,27 @@
 	status = "okay";
 };
 
+&tcphy0 {
+	extcon = <&fusb0>;
+	status = "okay";
+};
+
+&tcphy0_dp {
+	port {
+		tcphy0_typec_dp: endpoint {
+			remote-endpoint = <&usbc_dp>;
+		};
+	};
+};
+
+&tcphy0_usb3 {
+	port {
+		tcphy0_typec_ss: endpoint {
+			remote-endpoint = <&usbc_ss>;
+		};
+	};
+};
+
 &tsadc {
 	/* tshut mode 0:CRU 1:GPIO */
 	rockchip,hw-tshut-mode = <1>;
@@ -643,7 +738,64 @@
 	status = "okay";
 };
 
+&u2phy0 {
+	status = "okay";
+
+	u2phy0_otg: otg-port {
+		status = "okay";
+	};
+
+	u2phy0_host: host-port {
+		status = "okay";
+    phy-supply = <&vcc5v0_sys>;
+	};
+
+	port {
+		u2phy0_typec_hs: endpoint {
+			remote-endpoint = <&usbc_hs>;
+		};
+	};
+};
+
+&u2phy1 {
+	status = "okay";
+
+	u2phy1_otg: otg-port {
+		status = "okay";
+	};
+
+	u2phy1_host: host-port {
+		status = "okay";
+    phy-supply = <&vcc5v0_sys>;
+	};
+};
+
 &uart2 {
+	status = "okay";
+};
+
+&usb_host0_ehci {
+	status = "okay";
+};
+
+&usb_host0_ohci {
+	status = "okay";
+};
+
+&usb_host1_ehci {
+	status = "okay";
+};
+
+&usb_host1_ohci {
+	status = "okay";
+};
+
+&usbdrd3_0 {
+	status = "okay";
+};
+
+&usbdrd_dwc3_0 {
+	dr_mode = "host";
 	status = "okay";
 };
 
