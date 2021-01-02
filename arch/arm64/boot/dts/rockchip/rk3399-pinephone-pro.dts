@@ -96,6 +96,20 @@
 		};
 	};
 
+	vcc1v8_codec: vcc1v8-codec-regulator {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc1v8_codec_en>;
+		regulator-name = "vcc1v8_codec";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vcc3v3_sys>;
+	};
+
 	/* micro SD card power */
 	vcc3v0_sd: vcc3v0-sd {
 		compatible = "regulator-fixed";
@@ -565,6 +579,12 @@
 		};
 		display_pwren1: display-pwren1 {
 			rockchip,pins = <3 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+	};
+
+	sound {
+		vcc1v8_codec_en: vcc1v8-codec-en {
+			rockchip,pins = <3 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>;
 		};
 	};
 };
