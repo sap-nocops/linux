@@ -12,7 +12,39 @@
 	compatible = "pine64,pinephone-pro", "rockchip,rk3399";
 
 	chosen {
-		stdout-path = "serial2:1500000n8";
+		bootargs = "earlycon=uart8250,mmio32,0xff1a0000";
+		stdout-path = "serial2:4800n8";
+	};
+
+	cluster1_opp_ppp: opp-table1b {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp00 {
+			opp-hz = /bits/ 64 <408000000>;
+			opp-microvolt = <800000>;
+			clock-latency-ns = <40000>;
+		};
+		opp01 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <800000>;
+		};
+		opp02 {
+			opp-hz = /bits/ 64 <816000000>;
+			opp-microvolt = <825000>;
+		};
+		opp03 {
+			opp-hz = /bits/ 64 <1008000000>;
+			opp-microvolt = <875000>;
+		};
+		opp04 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <950000>;
+		};
+		opp05 {
+			opp-hz = /bits/ 64 <1416000000>;
+			opp-microvolt = <1025000>;
+		};
 	};
 
 	backlight: backlight {
@@ -35,6 +67,20 @@
 		regulator-boot-on;
 	};
 
+	vcc5v0_sys: vcc5v0-host-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_sys";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+		regulator-boot-on;
+		vin-supply = <&vcc_sysin>;
+
+		regulator-state-mem {
+			regulator-on-in-suspend;
+		};
+	};
+
 	/* Main 3.3v supply */
 	vcc3v3_sys: vcc3v3-sys {
 		compatible = "regulator-fixed";
@@ -47,6 +93,23 @@
 
 		regulator-state-mem {
 			regulator-on-in-suspend;
+		};
+	};
+
+	/* micro SD card power */
+	vcc3v0_sd: vcc3v0-sd {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdmmc0_pwr_h>;
+		regulator-name = "vcc3v0_sd";
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
+		vin-supply = <&vcc3v3_sys>;
+
+		regulator-state-mem {
+			regulator-off-in-suspend;
 		};
 	};
 
@@ -372,6 +435,7 @@
 		interrupts = <RK_PA2 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&fusb0_int>;
+		vbus-supply = <&vcc5v0_sys>;
 		status = "okay";
 	};
 };
@@ -539,8 +603,8 @@
 	max-frequency = <150000000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc_clk &sdmmc_cmd &sdmmc_bus4>;
-	vmmc-supply = <&vcc3v3_s3>;
-	vqmmc-supply = <&vcc_1v8>;
+	vmmc-supply = <&vcc3v0_sd>;
+	vqmmc-supply = <&vcc_sd>;
 	status = "okay";
 };
 
