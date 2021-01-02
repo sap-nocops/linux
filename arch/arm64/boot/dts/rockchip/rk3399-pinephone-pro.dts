@@ -191,12 +191,12 @@
 
 &cpu_b0 {
 	cpu-supply = <&vdd_cpu_b>;
-	status = "disabled";
+	operating-points-v2 = <&cluster1_opp_ppp>;
 };
 
 &cpu_b1 {
 	cpu-supply = <&vdd_cpu_b>;
-	status = "disabled";
+	operating-points-v2 = <&cluster1_opp_ppp>;
 };
 
 #ifndef WITHOUT_CDN_DP
@@ -421,7 +421,7 @@
 	};
 
 	vdd_cpu_b: regulator@40 {
-		compatible = "silergy,disabled,syr827";
+		compatible = "silergy,syr827";
 		reg = <0x40>;
 		fcs,suspend-voltage-selector = <1>;
 		pinctrl-names = "default";
