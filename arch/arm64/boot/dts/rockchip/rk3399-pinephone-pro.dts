@@ -59,7 +59,15 @@
 
 	sdio_pwrseq: sdio-pwrseq {
 		compatible = "mmc-pwrseq-simple";
+		clocks = <&rk818 1>;
+		clock-names = "ext_clock";
 		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_enable_h>;
+		post-power-on-delay-ms = <100>;
+		power-off-delay-us = <500000>;
+
+		/* WL_REG_ON on module */
+		reset-gpios = <&gpio0 RK_PB2 GPIO_ACTIVE_LOW>;
 	};
 
 	/* Power tree */
@@ -104,7 +112,7 @@
 	};
 
 	/* Main 3.3v supply */
-	vcc3v3_sys: vcc3v3-sys {
+	vcc3v3_sys: wifi_bat: vcc3v3-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc3v3_sys";
 		regulator-always-on;
@@ -277,7 +285,7 @@
 				};
 			};
 
-			vcc_1v8: DCDC_REG4 {
+			vcc_1v8: vcc_wl: DCDC_REG4 {
 				regulator-name = "vcc_1v8";
 				regulator-always-on;
 				regulator-boot-on;
@@ -596,7 +604,7 @@
 		};
 
 		bt_wake_l: bt-wake-l {
-			rockchip,pins = <2 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>;
+			rockchip,pins = <2 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -768,6 +776,27 @@
 	u2phy1_host: host-port {
 		status = "okay";
     phy-supply = <&vcc5v0_sys>;
+	};
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_xfer &uart0_cts &uart0_rts>;
+	uart-has-rtscts;
+	status = "okay";
+
+	bluetooth {
+		compatible = "brcm,bcm4345c5";
+		clocks = <&rk818 1>;
+		clock-names = "lpo";
+		device-wakeup-gpios = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
+		host-wakeup-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
+		max-speed = <1500000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_host_wake_l &bt_wake_l &bt_enable_h>;
+		shutdown-gpios = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
+		vbat-supply = <&wifi_bat>;
+		vddio-supply = <&vcc_wl>;
 	};
 };
 
