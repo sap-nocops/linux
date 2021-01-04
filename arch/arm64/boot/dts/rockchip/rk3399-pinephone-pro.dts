@@ -478,6 +478,28 @@
 	i2c-scl-rising-time-ns = <450>;
 	i2c-scl-falling-time-ns = <15>;
 	status = "okay";
+
+	touchscreen@14 {
+		compatible = "goodix,gt917s";
+		reg = <0x14>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <RK_PB5 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio3 RK_PB5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 RK_PB4 GPIO_ACTIVE_HIGH>;
+		AVDD28-supply = <&vcc3v0_touch>;
+		VDDIO-supply = <&vcc3v0_touch>;
+		touchscreen-size-x = <720>;
+		touchscreen-size-y = <1440>;
+	};
+
+	light-sensor@48 {
+		compatible = "sensortek,stk3311";
+		reg = <0x48>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <RK_PD3 IRQ_TYPE_EDGE_FALLING>;
+		vdd-supply = <&vcc_3v0>;
+		leda-supply = <&vcc_3v0>;
+	};
 };
 
 &i2c4 {
@@ -542,6 +564,34 @@
 				};
 			};
 		};
+	};
+
+	accelerometer@68 {
+		compatible = "invensense,mpu6500";
+		reg = <0x68>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <RK_PC6 IRQ_TYPE_LEVEL_LOW>;
+		vdd-supply = <&vcc_1v8>;
+		vddio-supply = <&vcc_1v8>;
+	};
+
+	lis3mdl: magnetometer@1e {
+		compatible = "st,lis3mdl-magn";
+		reg = <0x1c>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <RK_PA1 IRQ_TYPE_LEVEL_LOW>;
+		vdd-supply = <&vcc3v3_sys>;
+		vddio-supply = <&vcc_1v8>;
+	};
+
+	// not populated currently
+	ak09911: compass@0c {
+		compatible = "asahi-kasei,ak09911";
+		reg = <0x0c>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <RK_PA1 IRQ_TYPE_LEVEL_LOW>;
+		vdd-supply = <&vcc_3v0>;
+		vid-supply = <&vcc_1v8>;
 	};
 };
 
