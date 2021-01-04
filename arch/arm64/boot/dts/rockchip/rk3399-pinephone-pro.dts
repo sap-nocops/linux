@@ -253,7 +253,7 @@
 
 		regulators {
 			vdd_cpu_l: DCDC_REG1 {
-				regulator-name = "vdd_cpu_1";
+				regulator-name = "vdd_cpu_l";
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-min-microvolt = <750000>;
