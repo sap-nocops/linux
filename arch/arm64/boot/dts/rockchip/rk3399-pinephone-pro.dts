@@ -5,8 +5,9 @@
  */
 
 /dts-v1/;
+#include <dt-bindings/input/gpio-keys.h>
+#include <dt-bindings/input/linux-event-codes.h>
 #include <dt-bindings/usb/pd.h>
-#include <dt-bindings/input/input.h>
 #include <dt-bindings/leds/common.h>
 #include "rk3399.dtsi"
 #include "rk3399-opp.dtsi"
@@ -81,23 +82,47 @@
 
 	leds {
 		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&red_led_pin &green_led_pin &blue_led_pin>;
 
-		blue {
-			function = LED_FUNCTION_INDICATOR;
-			color = <LED_COLOR_ID_BLUE>;
-			gpio = <&gpio4 RK_PD6 GPIO_ACTIVE_HIGH>;
-		};
-
-		green {
-			function = LED_FUNCTION_INDICATOR;
-			color = <LED_COLOR_ID_GREEN>;
-			gpio = <&gpio4 RK_PD5 GPIO_ACTIVE_HIGH>;
-		};
-
-		red {
-			function = LED_FUNCTION_INDICATOR;
+		led-standby {
 			color = <LED_COLOR_ID_RED>;
-			gpio = <&gpio4 RK_PD2 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+			function = LED_FUNCTION_STANDBY;
+			gpios = <&gpio4 RK_PD2 GPIO_ACTIVE_HIGH>;
+			label = "red:standby";
+			panic-indicator;
+			retain-state-suspended;
+		};
+
+		led-pwr {
+			color = <LED_COLOR_ID_GREEN>;
+			default-state = "on";
+			function = LED_FUNCTION_POWER;
+			gpios = <&gpio4 RK_PD5 GPIO_ACTIVE_HIGH>;
+			label = "green:disk-activity";
+		};
+
+		blue-charging {
+			color = <LED_COLOR_ID_BLUE>;
+			default-state = "off";
+			function = LED_FUNCTION_CHARGING;
+			gpios = <&gpio0 RK_PD6 GPIO_ACTIVE_HIGH>;
+			label = "blue:charging";
+		};
+	};
+
+	gpio-key-power {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwrbtn_pin>;
+
+		power {
+			debounce-interval = <20>;
+			gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
+			label = "Power";
+			linux,code = <KEY_POWER>;
+			wakeup-source;
 		};
 	};
 
@@ -723,7 +748,7 @@
 	};
 
 	buttons {
-		pwrbtn: pwrbtn {
+		pwrbtn_pin: pwrbtn-pin {
 			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
@@ -731,6 +756,20 @@
 	fusb302x {
 		fusb0_int: fusb0-int {
 			rockchip,pins = <1 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	leds {
+		red_led_pin: red-led-pin {
+			rockchip,pins = <4 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		green_led_pin: green-led-pin {
+			rockchip,pins = <4 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		blue_led_pin: blue-led-pin {
+			rockchip,pins = <4 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
