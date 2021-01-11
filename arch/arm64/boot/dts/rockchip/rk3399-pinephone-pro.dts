@@ -17,7 +17,7 @@
 
 	chosen {
 		bootargs = "earlycon=uart8250,mmio32,0xff1a0000";
-		stdout-path = "serial2:4800n8";
+		stdout-path = "serial2:38400n8";
 	};
 
 	cluster1_opp_ppp: opp-table1b {
