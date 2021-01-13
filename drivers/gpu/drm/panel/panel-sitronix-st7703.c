@@ -350,7 +350,7 @@ static const struct drm_display_mode xbd599_mode = {
 static const struct st7703_panel_desc xbd599_desc = {
 	.mode = &xbd599_mode,
 	.lanes = 4,
-	.mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_SYNC_PULSE,
+	.mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST,
 	.format = MIPI_DSI_FMT_RGB888,
 	.init_sequence = xbd599_init_sequence,
 };
