@@ -33,6 +33,7 @@
 #include <linux/regmap.h>
 //#include <linux/rk_keys.h>
 #include <linux/rtc.h>
+#include <linux/time64.h>
 #include <linux/timer.h>
 //#include <linux/wakelock.h>
 #include <linux/workqueue.h>
@@ -165,10 +166,10 @@ struct rk818_battery {
 	struct workqueue_struct		*bat_monitor_wq;
 	struct delayed_work		bat_delay_work;
 	struct delayed_work		calib_delay_work;
-	struct wake_lock		wake_lock;
+	// struct wake_lock		wake_lock;
 	struct notifier_block           fb_nb;
 	struct timer_list		caltimer;
-	time_t				rtc_base;
+	time64_t				rtc_base;
 	int				bat_res;
 	int				chrg_status;
 	bool				is_initialized;
@@ -258,11 +259,16 @@ struct rk818_battery {
 
 #define DIV(x)	((x) ? (x) : 1)
 
+static void rk_send_wakeup_key(void)
+{
+	// TODO: WHAT TO DO HERE?
+}
+
 static u64 get_boot_sec(void)
 {
-	struct timespec ts;
+	struct timespec64 ts;
 
-	get_monotonic_boottime(&ts);
+	ktime_get_boottime_ts64(&ts);
 
 	return ts.tv_sec;
 }
@@ -1457,9 +1463,9 @@ static void rk818_bat_init_coffset(struct rk818_battery *di)
 	    __func__, di->poffset, ioffset, rk818_bat_get_coffset(di));
 }
 
-static void rk818_bat_caltimer_isr(unsigned long data)
+static void rk818_bat_caltimer_isr(struct timer_list *t)
 {
-	struct rk818_battery *di = (struct rk818_battery *)data;
+	struct rk818_battery *di = from_timer(di, t, caltimer);
 
 	mod_timer(&di->caltimer, jiffies + MINUTE(8) * HZ);
 	queue_delayed_work(di->bat_monitor_wq, &di->calib_delay_work,
@@ -1490,7 +1496,7 @@ static void rk818_bat_internal_calib(struct work_struct *work)
 
 static void rk818_bat_init_caltimer(struct rk818_battery *di)
 {
-	setup_timer(&di->caltimer, rk818_bat_caltimer_isr, (unsigned long)di);
+	timer_setup(&di->caltimer, rk818_bat_caltimer_isr, 0);
 	di->caltimer.expires = jiffies + MINUTE(8) * HZ;
 	add_timer(&di->caltimer);
 	INIT_DELAYED_WORK(&di->calib_delay_work, rk818_bat_internal_calib);
@@ -2553,8 +2559,8 @@ static void rk818_bat_rsoc_daemon(struct rk818_battery *di)
 	if ((di->remain_cap < 0) && (di->fb_blank != 0)) {
 		if (!sec)
 			sec = get_boot_sec();
-		wake_lock_timeout(&di->wake_lock,
-				  (di->pdata->monitor_sec + 1) * HZ);
+		// wake_lock_timeout(&di->wake_lock,
+		// 		  (di->pdata->monitor_sec + 1) * HZ);
 
 		DBG("sec=%ld, hold_sec=%ld\n", sec, base2sec(sec));
 		if (base2sec(sec) >= 60) {
@@ -2566,7 +2572,7 @@ static void rk818_bat_rsoc_daemon(struct rk818_battery *di)
 			rk818_bat_init_capacity(di, remain_cap);
 			BAT_INFO("adjust cap below 0 --> %d, rsoc=%d\n",
 				 di->remain_cap, di->rsoc);
-			wake_unlock(&di->wake_lock);
+			// wake_unlock(&di->wake_lock);
 		}
 	} else {
 		sec = 0;
@@ -3062,13 +3068,11 @@ static void rk818_bat_init_info(struct rk818_battery *di)
 		       SAMPLE_RES_DIV1 : SAMPLE_RES_DIV2;
 }
 
-static time_t rk818_get_rtc_sec(void)
+static time64_t rk818_get_rtc_sec(void)
 {
 	int err;
 	struct rtc_time tm;
-	struct timespec tv = { .tv_nsec = NSEC_PER_SEC >> 1, };
 	struct rtc_device *rtc = rtc_class_open(CONFIG_RTC_HCTOSYS_DEVICE);
-	time_t sec;
 
 	err = rtc_read_time(rtc, &tm);
 	if (err) {
@@ -3082,10 +3086,7 @@ static time_t rk818_get_rtc_sec(void)
 		return 0;
 	}
 
-	rtc_tm_to_time(&tm, &tv.tv_sec);
-	sec = tv.tv_sec;
-
-	return sec;
+	return rtc_tm_to_time64(&tm);
 }
 
 static int rk818_bat_rtc_sleep_sec(struct rk818_battery *di)
@@ -3392,7 +3393,7 @@ static int rk818_battery_probe(struct platform_device *pdev)
 	rk818_bat_init_fg(di);
 	rk818_bat_init_sysfs(di);
 	rk818_bat_register_fb_notify(di);
-	wake_lock_init(&di->wake_lock, WAKE_LOCK_SUSPEND, "rk818_bat_lock");
+	//wake_lock_init(&di->wake_lock, WAKE_LOCK_SUSPEND, "rk818_bat_lock");
 	di->bat_monitor_wq = alloc_ordered_workqueue("%s",
 			WQ_MEM_RECLAIM | WQ_FREEZABLE, "rk818-bat-monitor-wq");
 	INIT_DELAYED_WORK(&di->bat_delay_work, rk818_battery_work);
@@ -3508,9 +3509,9 @@ static int rk818_battery_resume(struct platform_device *dev)
 			   VB_LOW_INT_EN, VB_LOW_INT_EN);
 
 	/* charge/lowpower lock: for battery work to update dsoc and rsoc */
-	if ((di->sleep_chrg_online) ||
-	    (!di->sleep_chrg_online && di->voltage_avg < di->pdata->pwroff_vol))
-		wake_lock_timeout(&di->wake_lock, msecs_to_jiffies(2000));
+	// if ((di->sleep_chrg_online) ||
+	//     (!di->sleep_chrg_online && di->voltage_avg < di->pdata->pwroff_vol))
+	// 	wake_lock_timeout(&di->wake_lock, msecs_to_jiffies(2000));
 
 	queue_delayed_work(di->bat_monitor_wq, &di->bat_delay_work,
 			   msecs_to_jiffies(1000));
