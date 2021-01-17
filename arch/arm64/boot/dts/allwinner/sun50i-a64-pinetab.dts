@@ -19,6 +19,9 @@
 
 	aliases {
 		serial0 = &uart0;
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
+		mmc2 = &mmc2;
 		ethernet0 = &rtl8723cs;
 	};
 
