@@ -503,13 +503,15 @@ static int axp20x_usb_power_suspend(struct device *dev)
 	int i = 0;
 
 	/*
-	 * Allow wake via VBUS_PLUGIN only.
+	 * Allow wake via VBUS_PLUGIN and VBUS_REMOVAL only.
 	 *
 	 * As nested threaded IRQs are not automatically disabled during
 	 * suspend, we must explicitly disable the remainder of the IRQs.
 	 */
-	if (device_may_wakeup(&power->supply->dev))
+	if (device_may_wakeup(&power->supply->dev)) {
 		enable_irq_wake(power->irqs[i++]);
+		enable_irq_wake(power->irqs[i++]);
+	}
 	while (i < power->num_irqs)
 		disable_irq(power->irqs[i++]);
 
@@ -521,8 +523,10 @@ static int axp20x_usb_power_resume(struct device *dev)
 	struct axp20x_usb_power *power = dev_get_drvdata(dev);
 	int i = 0;
 
-	if (device_may_wakeup(&power->supply->dev))
+	if (device_may_wakeup(&power->supply->dev)) {
 		disable_irq_wake(power->irqs[i++]);
+		disable_irq_wake(power->irqs[i++]);
+	}
 	while (i < power->num_irqs)
 		enable_irq(power->irqs[i++]);
 
