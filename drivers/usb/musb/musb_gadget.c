@@ -8,6 +8,8 @@
  * Copyright (C) 2009 MontaVista Software, Inc. <source@mvista.com>
  */
 
+#define DEBUG
+
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/timer.h>
