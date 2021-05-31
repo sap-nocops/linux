@@ -1287,6 +1287,7 @@ DEFINE_SIMPLE_PROP(pinctrl6, "pinctrl-6", NULL)
 DEFINE_SIMPLE_PROP(pinctrl7, "pinctrl-7", NULL)
 DEFINE_SIMPLE_PROP(pinctrl8, "pinctrl-8", NULL)
 DEFINE_SIMPLE_PROP(remote_endpoint, "remote-endpoint", NULL)
+//DEFINE_SIMPLE_PROP(allwinner_sram, "allwinner,sram", NULL)
 DEFINE_SUFFIX_PROP(regulators, "-supply", NULL)
 DEFINE_SUFFIX_PROP(gpio, "-gpio", "#gpio-cells")
 
@@ -1346,6 +1347,27 @@ static struct device_node *parse_interrupts(struct device_node *np,
 	return of_irq_parse_one(np, index, &sup_args) ? NULL : sup_args.np;
 }
 
+static struct device_node *parse_allwinner_sram(struct device_node *np,
+						const char *prop_name, int index)
+{
+	struct device_node *sram_node;
+
+	if (!IS_ENABLED(CONFIG_SUNXI_SRAM))
+		return NULL;
+
+	if (strcmp(prop_name, "allwinner,sram"))
+		return NULL;
+
+	if (index > 0)
+		return NULL;
+
+	sram_node = of_parse_phandle(np, prop_name, 0);
+	sram_node = of_get_parent(sram_node);
+	sram_node = of_get_parent(sram_node);
+
+	return sram_node;
+}
+
 static const struct supplier_bindings of_supplier_bindings[] = {
 	{ .parse_prop = parse_clocks, },
 	{ .parse_prop = parse_interconnects, },
@@ -1376,6 +1398,7 @@ static const struct supplier_bindings of_supplier_bindings[] = {
 	{ .parse_prop = parse_regulators, },
 	{ .parse_prop = parse_gpio, },
 	{ .parse_prop = parse_gpios, },
+	{ .parse_prop = parse_allwinner_sram, },
 	{}
 };
 
