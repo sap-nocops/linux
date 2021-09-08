@@ -735,7 +735,7 @@
 	};
 
 	panel {
-		compatible = "xingbangda,xbd599";
+		compatible = "hannstar,hsd060bhw4";
 		reg = <0>;
 		backlight = <&backlight>;
 		reset-gpios = <&gpio4 RK_PD1 GPIO_ACTIVE_LOW>;
