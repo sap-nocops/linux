@@ -955,6 +955,13 @@
 	};
 };
 
+/* This bus is exposed on POGO pins */
+&i2c5 {
+	i2c-scl-rising-time-ns = <450>;
+	i2c-scl-falling-time-ns = <15>;
+	status = "okay";
+};
+
 &i2s0 {
 	rockchip,playback-channels = <2>;
 	rockchip,capture-channels = <2>;
